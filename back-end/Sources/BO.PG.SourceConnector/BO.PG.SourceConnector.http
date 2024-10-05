@@ -1,0 +1,24 @@
+@BO.PG.SourceConnector_HostAddress = http://localhost:5292
+
+### create source connector
+
+POST {{BO.PG.SourceConnector_HostAddress}}/connectors/
+content-type: application/json
+
+{
+  "name": "test",
+  "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
+  "schema": "northwind",
+  "tables": "categories,customers,orders,order_details",
+  "kafkaServer": "localhost:29092"
+}
+
+### create task
+
+POST {{BO.PG.SourceConnector_HostAddress}}/connectors/task
+content-type: application/json
+
+### cancel task
+
+PUT {{BO.PG.SourceConnector_HostAddress}}/connectors/cancel/123
+content-type: application/json

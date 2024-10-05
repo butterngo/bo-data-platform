@@ -1,0 +1,5 @@
+FROM confluentinc/cp-server-connect-base:7.1.0
+
+RUN confluent-hub install --no-prompt debezium/debezium-connector-sqlserver:1.9.2
+RUN confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.5.0
+

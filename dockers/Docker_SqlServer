@@ -1,0 +1,18 @@
+FROM mcr.microsoft.com/mssql/server:2019-latest
+USER root
+ENV ACCEPT_EULA Y
+ENV SA_PASSWORD Passw@rd
+ENV MSSQL_AGENT_ENABLED True
+
+COPY  /db/TestDB.bak ./var/opt/mssql/data/TestDB.bak
+RUN mkdir -p /usr/src/app
+
+WORKDIR /usr/src/app
+
+COPY  /db/enable_cdc.sql ./enable_cdc.sql
+COPY  /db/run-initialization.sh ./run-initialization.sh
+COPY  /db/entrypoint.sh ./entrypoint.sh
+
+RUN chmod +x entrypoint.sh
+CMD /bin/bash ./entrypoint.sh
+
