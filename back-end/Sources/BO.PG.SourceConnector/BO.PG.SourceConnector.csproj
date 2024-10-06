@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Core\Bo.Kafka\Bo.Kafka.csproj" />
+    <ProjectReference Include="..\..\Shares\Bo.Kafka\Bo.Kafka.csproj" />
   </ItemGroup>
 
 </Project>

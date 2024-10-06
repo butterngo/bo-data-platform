@@ -6,7 +6,6 @@ using BO.PG.SourceConnector.Repositories;
 using Confluent.Kafka;
 using Npgsql;
 using PgOutput2Json;
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace BO.PG.SourceConnector.Handlers;
