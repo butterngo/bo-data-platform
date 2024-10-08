@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sinks\BO.BigQuery.SinkConnector\BO.BigQuery.SinkConnector.csproj" />
+    <ProjectReference Include="..\Sinks\BO.PG.SinkConnector\BO.PG.SinkConnector.csproj" />
+    <ProjectReference Include="..\Sources\BO.PG.SourceConnector\BO.PG.SourceConnector.csproj" />
+  </ItemGroup>
+
+</Project>

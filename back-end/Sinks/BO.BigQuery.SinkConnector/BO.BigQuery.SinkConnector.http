@@ -1,6 +1,0 @@
-@BO.BigQuery.SinkConnector_HostAddress = http://localhost:5168
-
-GET {{BO.BigQuery.SinkConnector_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
