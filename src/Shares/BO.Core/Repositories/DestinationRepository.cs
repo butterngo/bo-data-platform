@@ -9,7 +9,6 @@ internal class DestinationRepository : IDestinationRepository
 {
 	private readonly IDataContext _dataContext;
 	private readonly ILogger<DestinationRepository> _logger;
-	private IEnumerable<Destination> Entities { get; set; }
 
 	public DestinationRepository(IDataContext dataContext, ILogger<DestinationRepository> logger)
 	{
@@ -37,23 +36,15 @@ internal class DestinationRepository : IDestinationRepository
 
 	public async Task<IEnumerable<Destination>> GetAllAsync()
 	{
-		if (Entities == null)
-		{
-			using var conn = _dataContext.CreateConnection();
+		using var conn = _dataContext.CreateConnection();
 
-			Entities = await conn.QueryAsync<Destination>(@$"select * from {DestinationSchema.Table}");
-		}
-
-		return Entities;
+		return await conn.QueryAsync<Destination>(@$"select * from {DestinationSchema.Table}");
 	}
 
 	public async Task<Destination?> GetByAsync(string id)
 	{
-		if (Entities == null)
-		{
-			Entities = await GetAllAsync();
-		}
+		using var conn = _dataContext.CreateConnection();
 
-		return Entities.FirstOrDefault(x => x.Id.Equals(id));
+		return await conn.QueryFirstOrDefaultAsync<Destination>(@$"select * from {DestinationSchema.Table} where id=@id", new { id });
 	}
 }

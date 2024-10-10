@@ -14,7 +14,7 @@ public class CreatePGDestConnector
 
 	public Dictionary<string, object> Consumer => new Dictionary<string, object>
 	{
-		{ "groupId", "bo_pg_sink_connector".ToLower() },
+		{ "groupId", $"bo_pg_sink_connector-{Schema}".ToLower() },
 		{ "kafkaServer", KafkaServer }
 	};
 }

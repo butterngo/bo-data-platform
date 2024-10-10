@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
-using System.Text.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace BO.Core.Models;
 
@@ -8,6 +6,8 @@ public class ColumnDescriptor
 {
 	[JsonPropertyName("field")]
 	public string? Field { get; set; }
+	[JsonPropertyName("isPrimary")]
+	public bool IsPrimary { get; set; }
 	[JsonPropertyName("type")]
 	public string? Type { get; set; }
 	[JsonPropertyName("isNullable")]

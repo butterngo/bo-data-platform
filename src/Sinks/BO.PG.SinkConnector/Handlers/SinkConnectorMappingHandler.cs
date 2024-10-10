@@ -11,7 +11,7 @@ public class SinkConnectorMappingHandler : ISinkConnectorMappingHandler<CreatePG
 	{
 		var destination = new Destination
 		{
-			Name = Guid.NewGuid().ToString()
+			Name = input.Name,
 		};
 
 		var appConfiguration = new PgAppConfiguration

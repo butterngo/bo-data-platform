@@ -19,9 +19,22 @@ POST {{BO.Apis_HostAddress }}/connectors/destinations/postgresql
 content-type: application/json
 
 {
-  "name": "northwind_replication",
-  "topicPattern": "bo_connector_northwind_.*",
+  "name": "northwind_replication_1",
+  "topicPattern": "^bo_connector_northwind_.*_topic$",
   "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
-  "schema": "northwind_replication",
+  "schema": "northwind_replication_1",
+  "kafkaServer": "localhost:29092"
+}
+
+### create source connector_ category
+
+POST {{BO.Apis_HostAddress }}/connectors/destinations/postgresql
+content-type: application/json
+
+{
+  "name": "northwind_replication_2",
+  "Topics": "bo_connector_northwind_categories_topic,bo_connector_northwind_customers_topic",
+  "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
+  "schema": "northwind_replication_2",
   "kafkaServer": "localhost:29092"
 }

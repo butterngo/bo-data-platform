@@ -1,0 +1,112 @@
+﻿{
+  "schema": {
+    "type": "struct",
+    "fields": [
+      {
+        "type": "int32",
+        "isPrimary": true,
+        "option": false,
+        "field": "order_id"
+      },
+      {
+        "type": "string",
+        "isPrimary": false,
+        "option": true,
+        "field": "customer_id"
+      },
+      {
+        "type": "int32",
+        "isPrimary": false,
+        "option": true,
+        "field": "employee_id"
+      },
+      {
+        "type": "string",
+        "isPrimary": false,
+        "option": true,
+        "field": "order_date"
+      },
+      {
+        "type": "string",
+        "isPrimary": false,
+        "option": true,
+        "field": "required_date"
+      },
+      {
+        "type": "string",
+        "isPrimary": false,
+        "option": true,
+        "field": "shipped_date"
+      },
+      {
+        "type": "int32",
+        "isPrimary": false,
+        "option": true,
+        "field": "ship_via"
+      },
+      {
+        "type": "decimal",
+        "isPrimary": false,
+        "option": true,
+        "field": "freight"
+      },
+      {
+        "type": "string",
+        "isPrimary": false,
+        "option": true,
+        "field": "ship_name"
+      },
+      {
+        "type": "string",
+        "isPrimary": false,
+        "option": true,
+        "field": "ship_address"
+      },
+      {
+        "type": "string",
+        "isPrimary": false,
+        "option": true,
+        "field": "ship_city"
+      },
+      {
+        "type": "string",
+        "isPrimary": false,
+        "option": true,
+        "field": "ship_region"
+      },
+      {
+        "type": "string",
+        "isPrimary": false,
+        "option": true,
+        "field": "ship_postal_code"
+      },
+      {
+        "type": "string",
+        "isPrimary": false,
+        "option": true,
+        "field": "ship_country"
+      }
+    ]
+  },
+  "payload": {
+    "order_id": 10248,
+    "customer_id": "VINET",
+    "employee_id": 5,
+    "order_date": null,
+    "required_date": null,
+    "shipped_date": null,
+    "ship_via": 3,
+    "freight": 32.38,
+    "ship_name": "Vins et alcools Chevalier",
+    "ship_address": "59 rue de l'Abbaye",
+    "ship_city": "Reims",
+    "ship_region": null,
+    "ship_postal_code": "51100",
+    "ship_country": "France"
+  },
+  "source": {
+    "table": "northwind.orders"
+  },
+  "op": "I",
+  "ts_ms": 638641485865457400
+}

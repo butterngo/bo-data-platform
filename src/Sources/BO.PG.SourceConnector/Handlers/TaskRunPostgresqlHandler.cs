@@ -91,7 +91,7 @@ public class TaskRunPostgresqlHandler : ITaskRunHandler
 				{
 					var topic = string.IsNullOrEmpty(AppConfiguration.Topic) ? pgtable.Topic : AppConfiguration.Topic;
 
-					_logger.LogDebug($"Topic: {topic} table: {table}, json: {json}");
+					_logger.LogInformation($"Topic: {topic} table: {table}, json: {json}");
 
 					await Producer.ProduceAsync(topic, pgtable.SerializeKafkaMessage(json), cancellationToken);
 				}

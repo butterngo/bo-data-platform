@@ -4,7 +4,8 @@ using BO.Core.Entities;
 using BO.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using static Confluent.Kafka.ConfigPropertyNames;
+using Bo.Kafka.Models;
+using System.Threading;
 
 namespace BO.PG.SinkConnector.Handlers;
 
@@ -18,23 +19,26 @@ public class TaskRunPostgresqlHandler : ITaskRunHandler
 
 	private KafkaConsumer Consumer { get; set; }
 
+	private TableUtilities TableUtilities { get; set; }
+
 	public TaskRunPostgresqlHandler(IDestinationRepository destinationRepository,
 		ITaskRunRepository taskRunRepository,
-		ILogger<TaskRunPostgresqlHandler> logger) 
+		ILogger<TaskRunPostgresqlHandler> logger)
 	{
 		_logger = logger;
 		_destinationRepository = destinationRepository;
 		_taskRunRepository = taskRunRepository;
+		TableUtilities = new TableUtilities();
 	}
 
 	public void Dispose()
 	{
-		Consumer.Dispose();
+		Consumer?.Dispose();
 	}
 
 	public async Task HandleAsync(TaskRun state, CancellationToken cancellationToken)
 	{
-		try 
+		try
 		{
 			var destination = await _destinationRepository.GetByAsync(state.ReferenceId);
 
@@ -57,6 +61,8 @@ public class TaskRunPostgresqlHandler : ITaskRunHandler
 
 			_logger.LogDebug($"kafka server {kafkaServer} groupId: {groupId}");
 
+			await TableUtilities.CreateSchemaIfNotExited(AppConfiguration.ConnectionString, AppConfiguration.Schema, cancellationToken);
+
 			Consumer = new KafkaConsumer(new ConsumerConfig
 			{
 				BootstrapServers = kafkaServer,
@@ -67,22 +73,26 @@ public class TaskRunPostgresqlHandler : ITaskRunHandler
 
 			if (AppConfiguration.Topics != null)
 			{
-				Consumer.Consume(AppConfiguration.Topics, async message =>
+				await Consumer.Consume(AppConfiguration.Topics, async message =>
 				{
-					_logger.LogInformation("message: {@message}", message);
+					_logger.LogDebug("message: {@message}", message);
+
+					await ExecuteAsync(message, cancellationToken);
+
 				}, cancellationToken);
 
-				return;
 			}
 
 			if (!string.IsNullOrEmpty(AppConfiguration.TopicPattern))
 			{
-				Consumer.Consume("bo_connector_northwind_.*", async message =>
+				await Consumer.Consume(AppConfiguration.TopicPattern, async message =>
 				{
-					_logger.LogInformation($"message: {@message.ToJsonString()}");
+					_logger.LogDebug("message: {@message}", message);
+
+					await ExecuteAsync(message, cancellationToken);
+
 				}, cancellationToken);
 
-				return;
 			}
 		}
 		catch (Exception ex)
@@ -93,6 +103,31 @@ public class TaskRunPostgresqlHandler : ITaskRunHandler
 				stackTrace = $"{ex.StackTrace}",
 			}), cancellationToken);
 			throw;
+		}
+	}
+
+	private async Task ExecuteAsync(KafkaMessage kafkaMessage, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+
+		var tableName = TableUtilities.ConvertTableName(kafkaMessage, AppConfiguration.Schema);
+
+		switch (kafkaMessage.op.ToUpper()) 
+		{
+			case "I": 
+				{
+					await TableUtilities.InsertAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
+					break;
+				}
+			case "U":
+				{
+					await TableUtilities.UpdateAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
+					break;
+				}
+			case "D":
+				{
+					throw new NotImplementedException();
+				}
 		}
 	}
 }

@@ -17,11 +17,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BO.Worker", "BO.Worker\BO.W
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BO.Apis", "BO.Apis\BO.Apis.csproj", "{0D9C29A8-47B8-45D6-943D-ED5234706966}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BO.PG.SourceConnector", "Sources\BO.PG.SourceConnector\BO.PG.SourceConnector.csproj", "{3CF4A8D9-9A6B-4427-9F9D-B43FBEC89639}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BO.PG.SourceConnector", "Sources\BO.PG.SourceConnector\BO.PG.SourceConnector.csproj", "{3CF4A8D9-9A6B-4427-9F9D-B43FBEC89639}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BO.BigQuery.SinkConnector", "Sinks\BO.BigQuery.SinkConnector\BO.BigQuery.SinkConnector.csproj", "{947FDF16-2279-452B-8BDB-7310D915AB52}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BO.BigQuery.SinkConnector", "Sinks\BO.BigQuery.SinkConnector\BO.BigQuery.SinkConnector.csproj", "{947FDF16-2279-452B-8BDB-7310D915AB52}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BO.PG.SinkConnector", "Sinks\BO.PG.SinkConnector\BO.PG.SinkConnector.csproj", "{0EBC1B54-F220-46A8-BA71-95976E4818C1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{6089D32A-0B33-45DA-93FF-AA04366240F4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BO.PG.SinkConnector.Test", "Tests\BO.PG.SinkConnector.Test\BO.PG.SinkConnector.Test.csproj", "{F55E1ABA-53AB-4490-BEC0-12398714058D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,6 +61,10 @@ Global
 		{0EBC1B54-F220-46A8-BA71-95976E4818C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0EBC1B54-F220-46A8-BA71-95976E4818C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0EBC1B54-F220-46A8-BA71-95976E4818C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F55E1ABA-53AB-4490-BEC0-12398714058D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F55E1ABA-53AB-4490-BEC0-12398714058D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F55E1ABA-53AB-4490-BEC0-12398714058D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F55E1ABA-53AB-4490-BEC0-12398714058D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,6 +75,7 @@ Global
 		{3CF4A8D9-9A6B-4427-9F9D-B43FBEC89639} = {E107F026-918E-456A-A397-6294BACEA9AB}
 		{947FDF16-2279-452B-8BDB-7310D915AB52} = {CB2A0F3A-D3EA-4105-BCB3-F3762A6935A6}
 		{0EBC1B54-F220-46A8-BA71-95976E4818C1} = {CB2A0F3A-D3EA-4105-BCB3-F3762A6935A6}
+		{F55E1ABA-53AB-4490-BEC0-12398714058D} = {6089D32A-0B33-45DA-93FF-AA04366240F4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {56CB7C5A-6302-4E45-9D2A-75B9B240520B}

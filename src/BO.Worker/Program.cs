@@ -14,7 +14,7 @@ builder.Services.AddCore(options =>
 	.Bind(options);
 });
 
-builder.Services.AddSingleton<ITaskRunFactory, TaskRunFactory>();
+builder.Services.AddScoped<ITaskRunFactory, TaskRunFactory>();
 
 builder.Services.AddBigQueryDestConnector();
 builder.Services.AddPostgresqlSrcConnector();

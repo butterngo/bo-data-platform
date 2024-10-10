@@ -25,11 +25,7 @@ public class WorkerService : BackgroundService
 			{
 				var taskManagement = _serviceProvider.GetRequiredService<ITaskManagement>();
 
-				var taskRunFactory = _serviceProvider.GetRequiredService<ITaskRunFactory>();
-
-				using var scope = _serviceProvider.CreateScope();
-
-				var taskRunRepository = scope.ServiceProvider.GetRequiredService<ITaskRunRepository>();
+				var taskRunRepository = _serviceProvider.GetRequiredService<ITaskRunRepository>();
 
 				var taskRuns = await taskRunRepository.GetTasksAsync(stoppingToken);
 
@@ -44,17 +40,23 @@ public class WorkerService : BackgroundService
 					{
 						taskManagement.DoWork(taskRun, async (state, provider, token) =>
 						{
-							var taskRunHandler = taskRunFactory.GetHander(state.AppName, state.Type);
-							await taskRunHandler.HandleAsync(state, token);
+							try 
+							{
+								using var scope = provider.CreateScope();
+								var taskRunFactory = scope.ServiceProvider.GetRequiredService<ITaskRunFactory>();
+								var taskRunHandler = taskRunFactory.GetHander(state.AppName, state.Type);
+								await taskRunHandler.HandleAsync(state, token);
+							}
+							catch (Exception ex)
+							{
+								_logger.LogError("Message: {@Message} StackTrace: {@StackTrace}", ex.Message, ex.StackTrace);
+							}
+
 						}, stoppingToken);
 					}
 					catch (ArgumentOutOfRangeException ex)
 					{
 						_logger.LogWarning(ex.Message);
-					}
-					catch (Exception ex) 
-					{
-						_logger.LogError("Message: {@Message} StackTrace: {@StackTrace}", ex.Message, ex.StackTrace);
 					}
 				}
 			}

@@ -9,8 +9,6 @@ internal class SourceRepository : ISourceRepository
 {
 	private readonly IDataContext _dataContext;
 	private readonly ILogger<SourceRepository> _logger;
-	private IEnumerable<Source> Entities { get; set; }
-
 	public SourceRepository(IDataContext dataContext, ILogger<SourceRepository> logger)
 	{
 		_logger = logger;
@@ -37,23 +35,15 @@ internal class SourceRepository : ISourceRepository
 
 	public async Task<IEnumerable<Source>> GetAllAsync()
 	{
-		if (Entities == null)
-		{
-			using var conn = _dataContext.CreateConnection();
+		using var conn = _dataContext.CreateConnection();
 
-			Entities = await conn.QueryAsync<Source>(@"select * from sources");
-		}
-
-		return Entities;
+		return await conn.QueryAsync<Source>(@$"select * from {SourceSchema.Table}");
 	}
 
 	public async Task<Source?> GetByAsync(string id)
 	{
-		if (Entities == null)
-		{
-			Entities = await GetAllAsync();
-		}
+		using var conn = _dataContext.CreateConnection();
 
-		return Entities.FirstOrDefault(x=>x.Id.Equals(id));
+		return await conn.QueryFirstOrDefaultAsync<Source>(@$"select * from {SourceSchema.Table} where id = @id", new { id});
 	}
 }

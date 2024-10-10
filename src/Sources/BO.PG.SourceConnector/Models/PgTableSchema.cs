@@ -46,38 +46,38 @@ public class PgTableSchema : TableSchemaBase
 			{
 				case NpgsqlDbType.Bigint:
 					{
-						kafkaMessage.SetValue(column.Field, "int64", jObj[column.Field].GetValue<long>(), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "int64", jObj[column.Field].GetValue<long>(), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Double:
 					{
-						kafkaMessage.SetValue(column.Field, "double", jObj[column.Field].GetValue<double>(), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "double", jObj[column.Field].GetValue<double>(), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Real:
 					{
-						kafkaMessage.SetValue(column.Field, "decimal", jObj[column.Field].GetValue<float>(), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "float", jObj[column.Field].GetValue<float>(), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Money:
 					{
-						kafkaMessage.SetValue(column.Field, "decimal", jObj[column.Field].GetValue<decimal>(), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "decimal", jObj[column.Field].GetValue<decimal>(), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Smallint:
 					{
-						kafkaMessage.SetValue(column.Field, "int32", jObj[column.Field].GetValue<int>(), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "int32", jObj[column.Field].GetValue<int>(), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Bytea:
 					{
-						kafkaMessage.SetValue(column.Field, "string", jObj[column.Field].GetValue<string>(), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "string", jObj[column.Field].GetValue<string>(), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				default:
 					{
-						kafkaMessage.SetValue(column.Field, "string", jObj[column.Field].GetValue<string>(), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "string", jObj[column.Field].GetValue<string>(), column.IsPrimary, column.IsNullable);
 						break;
 					}
 			}
@@ -123,40 +123,40 @@ public class PgTableSchema : TableSchemaBase
 			{
 				case NpgsqlDbType.Bigint:
 					{
-						kafkaMessage.SetValue(column.Field, "int64", GetValue<long>(reader, NpgsqlDbType.Bigint), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "int64", GetValue<long>(reader, NpgsqlDbType.Bigint), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Double:
 					{
-						kafkaMessage.SetValue(column.Field, "double", GetValue<double>(reader, NpgsqlDbType.Double), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "double", GetValue<double>(reader, NpgsqlDbType.Double), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Real:
 					{
-						kafkaMessage.SetValue(column.Field, "decimal", GetValue<float>(reader, NpgsqlDbType.Real), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "decimal", GetValue<float>(reader, NpgsqlDbType.Real), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Numeric:
 				case NpgsqlDbType.Money:
 					{
-						kafkaMessage.SetValue(column.Field, "decimal", GetValue<decimal>(reader, NpgsqlDbType.Numeric), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "decimal", GetValue<decimal>(reader, NpgsqlDbType.Numeric), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Smallint:
 					{
-						kafkaMessage.SetValue(column.Field, "int32", GetValue<int>(reader, NpgsqlDbType.Smallint), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "int32", GetValue<int>(reader, NpgsqlDbType.Smallint), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Bytea:
 					{
 						var value = GetValue<byte[]>(reader, NpgsqlDbType.Bytea);
 
-						kafkaMessage.SetValue(column.Field, "string", value == null ? string.Empty : Encoding.UTF8.GetString(value), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "string", value == null ? string.Empty : Encoding.UTF8.GetString(value), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				default:
 					{
-						kafkaMessage.SetValue(column.Field, "string", GetValue<string>(reader), column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "string", GetValue<string>(reader), column.IsPrimary, column.IsNullable);
 						break;
 					}
 			}

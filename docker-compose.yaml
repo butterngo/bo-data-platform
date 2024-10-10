@@ -3,28 +3,30 @@
 #-c max_replication_slots=3
 version: "3.4"
 services:
-  #db:
-  #  container_name: grouparoo_db
-  #  image: postgres
-  #  restart: always
-  #  environment:
-  #    POSTGRES_PASSWORD: password
-  #    POSTGRES_DB: grouparoo_docker
-  #  command: >
-  #    postgres -c wal_level=logical
-  #  ports:
-  #    - 5432:5432
-  #  volumes:
-  #    - "postgres-data:/var/lib/postgresql/data"
+  db:
+    container_name: grouparoo_db
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: grouparoo_docker
+    command: >
+      postgres -c wal_level=logical
+    ports:
+      - 5432:5432
+    volumes:
+      - "postgres-data:/var/lib/postgresql/data"
       
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
+    restart: always
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
   kafka:
     image: confluentinc/cp-kafka:latest
+    restart: always
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -41,6 +43,7 @@ services:
       
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
+    restart: always
     ports:
       - "8080:8080"
     depends_on:

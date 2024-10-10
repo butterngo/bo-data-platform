@@ -1,9 +1,9 @@
-﻿using BO.Core.Models;
-using Dapper;
+﻿using Dapper;
 using System.Data;
-using System.Text.Json.Nodes;
+using BO.Core.Models;
 using System.Text.Json;
-using System.Data.SqlTypes;
+using System.Text.Json.Nodes;
+
 
 namespace BO.Core.Extensions;
 
@@ -27,6 +27,8 @@ public static class TableExtensions
 	{
 		var columns = await conn.QueryAsync<string>(sql, @param);
 
+		var primaryKey = await conn.ExtractPrimaryColumnAsync(@param);
+
 		return columns.Select(jsonString =>
 		{
 			const string columnName = "column_name";
@@ -40,6 +42,7 @@ public static class TableExtensions
 			return new ColumnDescriptor
 			{
 				Field = jsonObject[columnName].ToString(),
+				IsPrimary = jsonObject[columnName].ToString().Equals(primaryKey),
 				Type = jsonObject[dataType].ToString(),
 				IsNullable = jsonObject[is_nullable].ToString() == "YES" ? true : false,
 			};
@@ -55,5 +58,22 @@ public static class TableExtensions
 			) table_schema";
 
 		return await ExtractColumnAsync(conn, sql, @param);
+	}
+
+	public static async Task<string?> ExtractPrimaryColumnAsync(this IDbConnection conn, object @param)
+	{
+		var sql = @"SELECT
+    kcu.column_name
+FROM
+    information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu
+      ON tc.constraint_name = kcu.constraint_name
+      AND tc.table_schema = kcu.table_schema
+WHERE
+    tc.constraint_type = 'PRIMARY KEY'
+    and tc.table_schema  = @table_schema
+    AND tc.table_name = @table_name;";
+
+		return await conn.QueryFirstOrDefaultAsync<string>(sql, @param);
 	}
 }
