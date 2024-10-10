@@ -2,6 +2,7 @@ using BO.Apis;
 using BO.Core;
 using BO.Core.Interfaces;
 using BO.Core.Models;
+using BO.PG.SinkConnector.Handlers;
 using BO.PG.SourceConnector.Handlers;
 using BO.PG.SourceConnector.Models;
 
@@ -17,7 +18,9 @@ builder.Services.AddCore(options =>
 	.Bind(options);
 });
 
-builder.Services.AddSingleton<ISrcConnectorMappingHandler<CreatePGSrcConnector>, SrcConnectorMappingHandler>();
+builder.Services.AddTransient<ISrcConnectorMappingHandler<CreatePGSrcConnector>, SrcConnectorMappingHandler>();
+
+builder.Services.AddTransient<ISinkConnectorMappingHandler<CreatePGDestConnector>, SinkConnectorMappingHandler>();
 
 var app = builder.Build();
 

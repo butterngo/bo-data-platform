@@ -5,7 +5,7 @@ using BO.Worker.Models;
 using BO.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace BO.Worker.Handlers;
+namespace BO.BigQuery.SinkConnector.Handlers;
 
 public class TaskRunBigQueryHandler : ITaskRunHandler
 {

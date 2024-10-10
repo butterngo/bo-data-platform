@@ -9,13 +9,14 @@ public static class ConnectorsApi
 	{
 		//groups.MapGet("/", GetAllTodoItems).Produces(200, typeof(PagedResults<TodoItemOutput>)).ProducesProblem(401).Produces(429);
 		//groups.MapGet("/{id}", GetTodoItemById).Produces(200, typeof(TodoItemOutput)).ProducesProblem(401).Produces(429);
-		groups.MapPost("/", CreateConnector);
+		groups.MapPost("/sources/postgresql", CreateSrcConnector);
+		groups.MapPost("/destinations/postgresql", CreateDestConnector);
 		//groups.MapPut("/{id}", UpdateTodoItem).Accepts<TodoItemInput>("application/json").Produces(201).ProducesProblem(404).ProducesProblem(401).Produces(429);
 		//groups.MapDelete("/{id}", DeleteTodoItem).Produces(204).ProducesProblem(404).ProducesProblem(401).Produces(429);
 		return groups;
 	}
 
-	internal static async Task<IResult> CreateConnector(IServiceProvider provider,
+	internal static async Task<IResult> CreateSrcConnector(IServiceProvider provider,
 		CreatePGSrcConnector input,
 		CancellationToken cancellationToken)
 	{
@@ -32,5 +33,24 @@ public static class ConnectorsApi
 		await taskRunRepository.AddTaskAsync(taskRuns, cancellationToken);
 
 		return TypedResults.Ok(source);
+	}
+
+	internal static async Task<IResult> CreateDestConnector(IServiceProvider provider,
+		CreatePGDestConnector input,
+		CancellationToken cancellationToken)
+	{
+		var sinkConnectorMappingHandler = provider.GetRequiredService<ISinkConnectorMappingHandler<CreatePGDestConnector>>();
+
+		var destinationRepository = provider.GetRequiredService<IDestinationRepository>();
+
+		var taskRunRepository = provider.GetRequiredService<ITaskRunRepository>();
+
+		var (destination, taskRun) = await sinkConnectorMappingHandler.HandlAsync(input);
+
+		await destinationRepository.CreateAsync(destination);
+
+		await taskRunRepository.AddTaskAsync(taskRun, cancellationToken);
+
+		return TypedResults.Ok(destination);
 	}
 }

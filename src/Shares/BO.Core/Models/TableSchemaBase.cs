@@ -19,7 +19,7 @@ public abstract class TableSchemaBase
 	public TableSchemaBase() { }
 
 	[JsonIgnore]
-	public string Topic => $"bo_pg_source_connector_{TableSchame}_{TableName}";
+	public string Topic => $"bo_connector_{TableSchame}_{TableName}_topic";
 	[JsonIgnore]
 	public virtual string QualifiedName => $"{TableSchame}.{TableName}";
 	[JsonPropertyName("id")]

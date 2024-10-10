@@ -1,10 +1,9 @@
 ﻿using BO.Core;
 using BO.Core.Entities;
 using BO.Core.Extensions;
-using BO.Core.Implementations;
 using BO.Core.Interfaces;
+using BO.Core.Implementations;
 using BO.PG.SourceConnector.Models;
-using System.Text.Json;
 
 namespace BO.PG.SourceConnector.Handlers;
 

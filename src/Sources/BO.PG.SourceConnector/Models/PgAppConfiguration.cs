@@ -7,6 +7,8 @@ namespace BO.PG.SourceConnector.Models;
 
 internal class PgAppConfiguration : AppConfiguration
 {
+	[JsonPropertyName("topic")]
+	public string? Topic { get; set; }
 	[JsonPropertyName("connectionString")]
 	public required string ConnectionString { get; set; }
 	private string _pgPublicationName = string.Empty;

@@ -38,27 +38,25 @@ internal class TaskRunRepository : ITaskRunRepository
 		return await conn.ExecuteAsync(TaskRun.Insert, entities);
 	}
 
-	public async Task<IEnumerable<TaskRun>> GetSourcesAsync(CancellationToken cancellationToken)
+	public async Task<IEnumerable<TaskRun>> GetTasksAsync(CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
 		using var conn = _dataContext.CreateConnection();
 
-		return await conn.QueryAsync<TaskRun>($@"select * from task_runs where type = @type and status = @status", new 
+		return await conn.QueryAsync<TaskRun>($@"select * from task_runs where status = @status", new 
 		{ 
-			type = TaskRunType.Src,
 			status = TaskRunStatus.Created
 		});
 	}
 
-	public async Task<TaskRun?> GetSourceByAsync(string id, CancellationToken cancellationToken)
+	public async Task<TaskRun?> GetTaskByAsync(string id, CancellationToken cancellationToken)
 	{
 		using var conn = _dataContext.CreateConnection();
 
-		return await conn.QueryFirstOrDefaultAsync<TaskRun>($@"select * from task_runs where id=@id and type = @type and status = @status", new 
+		return await conn.QueryFirstOrDefaultAsync<TaskRun>($@"select * from task_runs where id=@id and status = @status", new 
 		{ 
 			id, 
-			type = TaskRunType.Src,
 			status = TaskRunStatus.Created
 		});
 	}
@@ -102,23 +100,5 @@ internal class TaskRunRepository : ITaskRunRepository
 		using var conn = _dataContext.CreateConnection();
 
 		return await conn.ExecuteAsync(sql, new { id, status = TaskRunStatus.Errored, errorMessage = error_message, rowVersion });
-	}
-
-	public async Task<IEnumerable<TaskRun>> GetDestsAsync(CancellationToken cancellationToken)
-	{
-		cancellationToken.ThrowIfCancellationRequested();
-
-		using var conn = _dataContext.CreateConnection();
-
-		return await conn.QueryAsync<TaskRun>($@"select * from task_runs where type = @type and status = @status", new
-		{
-			type = TaskRunType.Dest,
-			status = TaskRunStatus.Created
-		});
-	}
-
-	public Task<TaskRun?> GetDestByAsync(string id, CancellationToken cancellationToken)
-	{
-		throw new NotImplementedException();
 	}
 }

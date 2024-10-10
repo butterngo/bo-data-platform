@@ -10,13 +10,13 @@ using Microsoft.Extensions.Logging;
 
 namespace BO.PG.SourceConnector.Handlers;
 
-public class TaskRunKafkaHandler : ITaskRunHandler
+public class TaskRunPostgresqlHandler : ITaskRunHandler
 {
-    private readonly ILogger<TaskRunKafkaHandler> _logger;
+    private readonly ILogger<TaskRunPostgresqlHandler> _logger;
 
     private readonly ITaskRunRepository _taskRunRepository;
 
-    private readonly IDestinationRepository _sourceRepository;
+    private readonly ISourceRepository _sourceRepository;
 
 	private KafkaProducer Producer { get; set; }
 
@@ -26,12 +26,12 @@ public class TaskRunKafkaHandler : ITaskRunHandler
 
 	private readonly ILoggerFactory _loggerFactory;
 
-	public TaskRunKafkaHandler(ITaskRunRepository taskRunRepository,
-		IDestinationRepository sourceRepository,
+	public TaskRunPostgresqlHandler(ITaskRunRepository taskRunRepository,
+		ISourceRepository sourceRepository,
 		ILoggerFactory loggerFactory)
     {
 		_loggerFactory = loggerFactory;
-		_logger = loggerFactory.CreateLogger<TaskRunKafkaHandler>();
+		_logger = loggerFactory.CreateLogger<TaskRunPostgresqlHandler>();
         _taskRunRepository = taskRunRepository;
         _sourceRepository = sourceRepository;
 	}
@@ -89,9 +89,11 @@ public class TaskRunKafkaHandler : ITaskRunHandler
 				}
 				else 
 				{
-					_logger.LogDebug($"Topic: {pgtable.Topic} table: {table}, json: {json}");
+					var topic = string.IsNullOrEmpty(AppConfiguration.Topic) ? pgtable.Topic : AppConfiguration.Topic;
 
-					await Producer.ProduceAsync(pgtable.Topic, pgtable.SerializeKafkaMessage(json), cancellationToken);
+					_logger.LogDebug($"Topic: {topic} table: {table}, json: {json}");
+
+					await Producer.ProduceAsync(topic, pgtable.SerializeKafkaMessage(json), cancellationToken);
 				}
 			});
 
@@ -108,7 +110,7 @@ public class TaskRunKafkaHandler : ITaskRunHandler
 
 			if (source == null)
 			{
-				return;
+				throw new InvalidOperationException($"not found referenceId: {state.ReferenceId}");
 			}
 
 			AppConfiguration = PgAppConfiguration.Deserialize<PgAppConfiguration>(source.AppConfiguration);
@@ -149,8 +151,6 @@ public class TaskRunKafkaHandler : ITaskRunHandler
 				message = $"{ex.Message}",
 				stackTrace = $"{ex.StackTrace}",
 			}), cancellationToken);
-
-			_logger.LogError("Message: {@Message} StackTrace: {@StackTrace}", ex.Message, ex.StackTrace);
 			throw;
 		}
 	}

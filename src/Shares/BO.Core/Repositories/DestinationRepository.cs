@@ -41,7 +41,7 @@ internal class DestinationRepository : IDestinationRepository
 		{
 			using var conn = _dataContext.CreateConnection();
 
-			Entities = await conn.QueryAsync<Destination>(@"select * from sources");
+			Entities = await conn.QueryAsync<Destination>(@$"select * from {DestinationSchema.Table}");
 		}
 
 		return Entities;

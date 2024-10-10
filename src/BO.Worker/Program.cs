@@ -1,9 +1,8 @@
-using BO.Core.Interfaces;
-using BO.Worker;
 using BO.Core;
+using BO.Worker;
+using BO.Connectors;
 using BO.Core.Models;
-using BO.Worker.Handlers;
-using BO.PG.SourceConnector.Handlers;
+using BO.Core.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,11 +16,11 @@ builder.Services.AddCore(options =>
 
 builder.Services.AddSingleton<ITaskRunFactory, TaskRunFactory>();
 
-builder.Services.AddTransient<ITaskRunHandler, TaskRunBigQueryHandler>();
+builder.Services.AddBigQueryDestConnector();
+builder.Services.AddPostgresqlSrcConnector();
+builder.Services.AddPostgresqlDestConnector();
 
-builder.Services.AddTransient<ITaskRunHandler, TaskRunKafkaHandler>();
-
-builder.Services.AddHostedService<SinkConnectorWorker>();
+builder.Services.AddHostedService<WorkerService>();
 
 var app = builder.Build();
 

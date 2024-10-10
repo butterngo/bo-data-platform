@@ -5,6 +5,7 @@ using BO.PG.SourceConnector.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using BO.Core.Models;
+using System.Reflection;
 
 namespace BO.Core;
 

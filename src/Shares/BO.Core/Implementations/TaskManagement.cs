@@ -41,6 +41,8 @@ public class TaskManagement : ITaskManagement
 		}
 	}
 
+	public Func<Task, ITaskRun> OnBeforeDispose { get; set; }
+
 	public void DoWork<TInput>(TInput model, Func<TInput, IServiceProvider, CancellationToken, Task> func, CancellationToken cancellationToken)
 		where TInput : ITaskRun
 	{

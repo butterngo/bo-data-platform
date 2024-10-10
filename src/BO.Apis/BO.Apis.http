@@ -2,7 +2,7 @@
 
 ### create source connector
 
-POST {{BO.Apis_HostAddress }}/connectors/
+POST {{BO.Apis_HostAddress }}/connectors/sources/postgresql
 content-type: application/json
 
 {
@@ -13,3 +13,15 @@ content-type: application/json
   "kafkaServer": "localhost:29092"
 }
 
+### create source connector
+
+POST {{BO.Apis_HostAddress }}/connectors/destinations/postgresql
+content-type: application/json
+
+{
+  "name": "northwind_replication",
+  "topicPattern": "bo_connector_northwind_.*",
+  "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
+  "schema": "northwind_replication",
+  "kafkaServer": "localhost:29092"
+}

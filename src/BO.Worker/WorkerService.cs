@@ -2,17 +2,17 @@
 
 namespace BO.Worker;
 
-public class SinkConnectorWorker : BackgroundService
+public class WorkerService : BackgroundService
 {
-	private readonly ILogger<SinkConnectorWorker> _logger;
+	private readonly ILogger<WorkerService> _logger;
 
 	private readonly ILoggerFactory _loggerFactory;
 
 	private readonly IServiceProvider _serviceProvider;
 
-	public SinkConnectorWorker(ILoggerFactory loggerFactory, IServiceProvider serviceProvider)
+	public WorkerService(ILoggerFactory loggerFactory, IServiceProvider serviceProvider)
 	{
-		_logger = loggerFactory.CreateLogger<SinkConnectorWorker>();
+		_logger = loggerFactory.CreateLogger<WorkerService>();
 		_serviceProvider = serviceProvider;
 		_loggerFactory = loggerFactory;
 	}
@@ -31,7 +31,7 @@ public class SinkConnectorWorker : BackgroundService
 
 				var taskRunRepository = scope.ServiceProvider.GetRequiredService<ITaskRunRepository>();
 
-				var taskRuns = await taskRunRepository.GetSourcesAsync(stoppingToken);
+				var taskRuns = await taskRunRepository.GetTasksAsync(stoppingToken);
 
 				if (taskRuns.Count() == 0)
 				{
@@ -44,7 +44,7 @@ public class SinkConnectorWorker : BackgroundService
 					{
 						taskManagement.DoWork(taskRun, async (state, provider, token) =>
 						{
-							var taskRunHandler = taskRunFactory.GetHander(state.AppName);
+							var taskRunHandler = taskRunFactory.GetHander(state.AppName, state.Type);
 							await taskRunHandler.HandleAsync(state, token);
 						}, stoppingToken);
 					}
