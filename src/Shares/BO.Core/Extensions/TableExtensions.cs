@@ -9,27 +9,13 @@ namespace BO.Core.Extensions;
 
 public static class TableExtensions
 {
-	private static List<Dictionary<string, string>> Deserialize(string json)
-	{
-		var columnDescriptors = new List<Dictionary<string, string>>();
-
-		var nodes = JsonNode.Parse(json).AsArray();
-
-		foreach (var node in nodes)
-		{
-			columnDescriptors.Add(JsonSerializer.Deserialize<Dictionary<string, string>>(node.GetValue<string>()));
-		}
-
-		return columnDescriptors;
-	}
-
 	public static async Task<IEnumerable<ColumnDescriptor>> ExtractColumnAsync(this IDbConnection conn, string sql, object @param) 
 	{
-		var columns = await conn.QueryAsync<string>(sql, @param);
+		var columns = await conn.QueryAsync<dynamic>(sql, @param);
 
 		var primaryKey = await conn.ExtractPrimaryColumnAsync(@param);
 
-		return columns.Select(jsonString =>
+		return columns.Select(obj =>
 		{
 			const string columnName = "column_name";
 
@@ -37,25 +23,22 @@ public static class TableExtensions
 
 			const string is_nullable = "is_nullable";
 
-			var jsonObject = JsonNode.Parse(jsonString).AsObject();
+			var dictionary = (IDictionary<string, object>)obj;
 
 			return new ColumnDescriptor
 			{
-				Field = jsonObject[columnName].ToString(),
-				IsPrimary = jsonObject[columnName].ToString().Equals(primaryKey),
-				Type = jsonObject[dataType].ToString(),
-				IsNullable = jsonObject[is_nullable].ToString() == "YES" ? true : false,
+				Field = dictionary[columnName].ToString(),
+				IsPrimary = dictionary[columnName].ToString().Equals(primaryKey),
+				Type = dictionary[dataType].ToString(),
+				IsNullable = dictionary[is_nullable].ToString() == "YES" ? true : false,
 			};
 		});
 	}
 
 	public static async Task<IEnumerable<ColumnDescriptor>> ExtractColumnAsync(this IDbConnection conn, object @param)
 	{
-		var sql = @"select row_to_json(table_schema) 
-			from ( 
-			   select column_name, data_type, is_nullable
-			 from INFORMATION_SCHEMA.COLUMNS where table_schema = @table_schema and table_name = @table_name 
-			) table_schema";
+		var sql = @"select column_name, data_type, is_nullable
+			 from INFORMATION_SCHEMA.COLUMNS where table_schema = @table_schema and table_name = @table_name";
 
 		return await ExtractColumnAsync(conn, sql, @param);
 	}

@@ -80,7 +80,8 @@ public class TableUtilities
 
 	public string GenerateUpdateScript(string tableName, Dictionary<string, object> data, string condition)
 	{
-		var updates = string.Join(", ", data.Where(x=>x.Value != null).Select(kv => $"{kv.Key} = {FormatValue(kv.Value)}"));
+		var updates = string.Join(", ", data.Where(x=>x.Value != null).Select(kv => $"{kv.Key} = @{kv.Key}"));
+
 		return $"UPDATE {tableName} SET {updates} WHERE {condition};";
 	}
 
