@@ -1,9 +1,10 @@
 ﻿using BO.Core.Models;
 using BO.Core.Entities;
+using BO.Core.Interfaces;
 
 namespace BO.Core.Implementations;
 
-public abstract class SinkConnectorMappingBaseHandler<TModel>
+public abstract class DestinationConnectorMappingBaseHandler<TModel> : ISinkConnectorMappingHandler
 	where TModel : ConnectorBaseModel
 {
 	public async Task<(Destination Destination, TaskRun TaskRun)> HandlAsync(TModel input, CancellationToken cancellationToken)

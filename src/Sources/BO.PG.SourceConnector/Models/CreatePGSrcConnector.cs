@@ -1,10 +1,11 @@
-﻿using BO.Core.Entities.Enums;
+﻿using BO.Core;
+using BO.Core.Entities.Enums;
+using BO.Core.Models;
 
 namespace BO.PG.SourceConnector.Models;
 
-public class CreatePGSrcConnector
+public class CreatePGSrcConnector : ConnectorBaseModel
 {
-	public required string Name { get; set; }
 	public required string ConnectionString { get; set; }
 	public required string Schema { get; set; }
 	public required string Tables { get; set; }
@@ -17,4 +18,6 @@ public class CreatePGSrcConnector
 		{ "publisherType", PublisherType },
 		{ "kafkaServer", KafkaServer }
 	};
+
+	public override string AppName => Constants.AppNames.POSTGRESQL;
 }

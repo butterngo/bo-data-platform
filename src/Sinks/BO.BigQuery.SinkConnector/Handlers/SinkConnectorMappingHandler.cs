@@ -5,7 +5,7 @@ using BO.BigQuery.SinkConnector.Models;
 
 namespace BO.BigQuery.SinkConnector.Handlers;
 
-internal class SinkConnectorMappingHandler : SinkConnectorMappingBaseHandler<CreateBigQueryDestConnector>
+internal class SinkConnectorMappingHandler : DestinationConnectorMappingBaseHandler<CreateBigQueryDestConnector>
 {
 	protected override Task<Destination> GetDestinationAsync(CreateBigQueryDestConnector input, CancellationToken cancellationToken)
 	{

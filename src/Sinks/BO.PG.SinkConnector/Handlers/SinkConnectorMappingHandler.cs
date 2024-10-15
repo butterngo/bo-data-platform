@@ -7,7 +7,7 @@ using BO.PG.SourceConnector.Models;
 
 namespace BO.PG.SinkConnector.Handlers;
 
-internal class SinkConnectorMappingHandler : SinkConnectorMappingBaseHandler<CreatePGDestConnector>
+internal class SinkConnectorMappingHandler : DestinationConnectorMappingBaseHandler<CreatePGDestConnector>
 {
 	
 

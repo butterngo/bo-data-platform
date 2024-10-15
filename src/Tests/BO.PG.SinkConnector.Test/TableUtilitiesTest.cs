@@ -12,7 +12,7 @@ public class TableUtilitiesTest
 
 		var kafkaMessage = JsonSerializer.Deserialize<KafkaMessage>(json);
 
-		var sciprt = TableUtilities.GenerateInsertScript(kafkaMessage.source["table"].ToString(), kafkaMessage.payload);
+		//var sciprt = TableUtilities.GenerateInsertScript(kafkaMessage.source["table"].ToString(), kafkaMessage.payload);
 
 		//var script = TableUtilities.GenerateCreateTableScript(kafkaMessage.schema.fields, kafkaMessage.source["table"].ToString());
 		//KafkaMessage kafkaMessage

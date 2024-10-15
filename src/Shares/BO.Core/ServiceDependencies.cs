@@ -34,6 +34,8 @@ public static class ServiceDependencies
 
 		services.AddScoped<IDestinationConnectorService, DestinationConnectorService>();
 
+		services.AddScoped<ISourceConnectorService, SourceConnectorService>();
+
 		return services;
 	}
 }

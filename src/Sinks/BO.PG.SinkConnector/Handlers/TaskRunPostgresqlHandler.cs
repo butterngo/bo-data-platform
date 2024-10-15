@@ -5,7 +5,6 @@ using BO.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Bo.Kafka.Models;
-using System.Threading;
 
 namespace BO.PG.SinkConnector.Handlers;
 
@@ -14,21 +13,21 @@ public class TaskRunPostgresqlHandler : ITaskRunHandler
 	private readonly IDestinationRepository _destinationRepository;
 	private readonly ITaskRunRepository _taskRunRepository;
 	private readonly ILogger<TaskRunPostgresqlHandler> _logger;
+	private readonly TableRepository _tableRepository;
 
 	private PgAppConfiguration AppConfiguration { get; set; }
 
 	private KafkaConsumer Consumer { get; set; }
 
-	private TableUtilities TableUtilities { get; set; }
-
 	public TaskRunPostgresqlHandler(IDestinationRepository destinationRepository,
 		ITaskRunRepository taskRunRepository,
-		ILogger<TaskRunPostgresqlHandler> logger)
+		ILogger<TaskRunPostgresqlHandler> logger,
+		TableRepository tableRepository)
 	{
 		_logger = logger;
 		_destinationRepository = destinationRepository;
 		_taskRunRepository = taskRunRepository;
-		TableUtilities = new TableUtilities();
+		_tableRepository = tableRepository;
 	}
 
 	public void Dispose()
@@ -61,7 +60,7 @@ public class TaskRunPostgresqlHandler : ITaskRunHandler
 
 			_logger.LogDebug($"kafka server {kafkaServer} groupId: {groupId}");
 
-			await TableUtilities.CreateSchemaIfNotExited(AppConfiguration.ConnectionString, AppConfiguration.Schema, cancellationToken);
+			await _tableRepository.CreateSchemaIfNotExited(AppConfiguration.ConnectionString, AppConfiguration.Schema, cancellationToken);
 
 			Consumer = new KafkaConsumer(new ConsumerConfig
 			{
@@ -110,18 +109,18 @@ public class TaskRunPostgresqlHandler : ITaskRunHandler
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
-		var tableName = TableUtilities.ConvertTableName(kafkaMessage, AppConfiguration.Schema);
+		var tableName = _tableRepository.ConvertTableName(kafkaMessage, AppConfiguration.Schema);
 
 		switch (kafkaMessage.op.ToUpper()) 
 		{
 			case "I": 
 				{
-					await TableUtilities.InsertAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
+					await _tableRepository.InsertAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
 					break;
 				}
 			case "U":
 				{
-					await TableUtilities.UpdateAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
+					await _tableRepository.UpdateAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
 					break;
 				}
 			case "D":

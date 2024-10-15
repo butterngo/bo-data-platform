@@ -23,18 +23,18 @@ internal class DestinationConnectorService : IDestinationConnectorService
 		_sinkConnectorMappingHandlers = sinkConnectorMappingHandler;
 	}
 
-	private SinkConnectorMappingBaseHandler<TInput> GetHandler<TInput>() where TInput : ConnectorBaseModel
+	private DestinationConnectorMappingBaseHandler<TInput> GetHandler<TInput>() where TInput : ConnectorBaseModel
 	{
 		var sinkConnectorMappingHandler = _sinkConnectorMappingHandlers
 		.FirstOrDefault(x => x.GetType().BaseType
-		.Equals(typeof(SinkConnectorMappingBaseHandler<TInput>)));
+		.Equals(typeof(DestinationConnectorMappingBaseHandler<TInput>)));
 
 		if(sinkConnectorMappingHandler == null)
 		{
-			throw new InvalidOperationException($"Not found ISinkConnectorMappingHandler : {typeof(SinkConnectorMappingBaseHandler<TInput>).Name}");
+			throw new InvalidOperationException($"Not found SinkConnectorMappingBaseHandler : {typeof(DestinationConnectorMappingBaseHandler<TInput>).Name}");
 		}
 
-		return sinkConnectorMappingHandler as SinkConnectorMappingBaseHandler<TInput>;
+		return sinkConnectorMappingHandler as DestinationConnectorMappingBaseHandler<TInput>;
 	}
 
 	public async Task<Destination> CreateAsync<TInput>(TInput input, CancellationToken cancellationToken) where TInput : ConnectorBaseModel

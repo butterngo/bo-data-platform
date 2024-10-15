@@ -1,19 +1,19 @@
 ﻿using BO.Core;
 using BO.Core.Entities;
 using BO.Core.Extensions;
-using BO.Core.Interfaces;
 using BO.Core.Implementations;
 using BO.PG.SourceConnector.Models;
+using Npgsql;
 
 namespace BO.PG.SourceConnector.Handlers;
 
-internal class SrcConnectorMappingHandler : ISrcConnectorMappingHandler<CreatePGSrcConnector>
+internal class SrcConnectorMappingHandler : SourceConnectorMappingBaseHandler<CreatePGSrcConnector>
 {
-	public async Task<(Source Source, IEnumerable<TaskRun> TaskRuns)> HandlAsync(CreatePGSrcConnector input)
+	public override async Task<(Source Source, IEnumerable<TaskRun> TaskRuns)> HandlAsync(CreatePGSrcConnector input, CancellationToken cancellationToken)
 	{
-		var dataContext = new DataContext(input.ConnectionString);
+		using var conn = new NpgsqlConnection(input.ConnectionString);
 
-		using var conn = dataContext.CreateConnection();
+		await conn.OpenAsync(cancellationToken);
 
 		var tables = new List<PgTableSchema>();
 
@@ -39,7 +39,7 @@ internal class SrcConnectorMappingHandler : ISrcConnectorMappingHandler<CreatePG
 			Id = source.Id,
 			ReferenceId = source.Id,
 			Name = $"cdc data {input.Tables}",
-			AppName = Constants.AppNames.POSTGRESQL,
+			AppName = input.AppName,
 			IsCdcData = true
 		}
 	};

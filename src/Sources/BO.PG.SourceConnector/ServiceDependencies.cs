@@ -1,5 +1,4 @@
 ﻿using BO.Core.Interfaces;
-using BO.PG.SourceConnector.Models;
 using BO.PG.SourceConnector.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,7 +10,7 @@ public static class ServiceDependencies
 	{
 		services.AddTransient<ITaskRunHandler, TaskRunPostgresqlHandler>();
 
-		services.AddTransient<ISrcConnectorMappingHandler<CreatePGSrcConnector>, SrcConnectorMappingHandler>();
+		services.AddTransient<ISrcConnectorMappingHandler, SrcConnectorMappingHandler>();
 
 		return services;
 	}

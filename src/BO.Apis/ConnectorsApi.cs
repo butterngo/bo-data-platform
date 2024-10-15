@@ -19,23 +19,11 @@ public static class ConnectorsApi
 		return groups;
 	}
 
-	internal static async Task<IResult> CreateSrcConnector(IServiceProvider provider,
+	internal static async Task<IResult> CreateSrcConnector(ISourceConnectorService sourceConnectorService,
 		CreatePGSrcConnector input,
 		CancellationToken cancellationToken)
 	{
-		var srcConnectorMappingHandler = provider.GetRequiredService<ISrcConnectorMappingHandler<CreatePGSrcConnector>>();
-
-		var soureRepository = provider.GetRequiredService<ISourceRepository>();
-
-		var taskRunRepository = provider.GetRequiredService<ITaskRunRepository>();
-
-		var (source, taskRuns) = await srcConnectorMappingHandler.HandlAsync(input);
-
-		await soureRepository.CreateAsync(source);
-
-		await taskRunRepository.AddTaskAsync(taskRuns, cancellationToken);
-
-		return TypedResults.Ok(source);
+		return TypedResults.Ok(await sourceConnectorService.CreateAsync(input, cancellationToken));
 	}
 
 	internal static async Task<IResult> CreatePgDestConnector(IDestinationConnectorService destinationConnectorService,

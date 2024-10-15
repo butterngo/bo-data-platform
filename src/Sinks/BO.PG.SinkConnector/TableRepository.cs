@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace BO.PG.SinkConnector;
 
-public class TableUtilities
+public class TableRepository
 {
 	private NpgsqlConnection CreateConnection(string connectionString)
 	{
