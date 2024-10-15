@@ -1,22 +1,18 @@
-﻿using BO.Core;
+﻿using BO.Worker.Models;
 using BO.Core.Entities;
 using BO.Core.Implementations;
-using BO.Core.Interfaces;
-using BO.Core.Models;
-using BO.PG.SourceConnector.Models;
+using BO.BigQuery.SinkConnector.Models;
 
-namespace BO.PG.SinkConnector.Handlers;
+namespace BO.BigQuery.SinkConnector.Handlers;
 
-internal class SinkConnectorMappingHandler : SinkConnectorMappingBaseHandler<CreatePGDestConnector>
+internal class SinkConnectorMappingHandler : SinkConnectorMappingBaseHandler<CreateBigQueryDestConnector>
 {
-	
-
-	protected override Task<Destination> GetDestinationAsync(CreatePGDestConnector input, CancellationToken cancellationToken)
+	protected override Task<Destination> GetDestinationAsync(CreateBigQueryDestConnector input, CancellationToken cancellationToken)
 	{
 		var destination = new Destination
 		{
 			Name = input.Name,
-			AppConfiguration = new PgAppConfiguration
+			AppConfiguration = new BigQueryAppConfiguration
 			{
 				Topics = string.IsNullOrEmpty(input.Topics) ? null : input.Topics.Split(","),
 				TopicPattern = string.IsNullOrEmpty(input.TopicPattern) ? null : input.TopicPattern,

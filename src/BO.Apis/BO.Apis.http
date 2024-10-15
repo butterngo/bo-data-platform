@@ -1,6 +1,6 @@
 @BO.Apis_HostAddress = http://localhost:5179
 
-### create source connector
+### create sources connector
 
 POST {{BO.Apis_HostAddress }}/connectors/sources/postgresql
 content-type: application/json
@@ -13,12 +13,13 @@ content-type: application/json
   "kafkaServer": "localhost:29092"
 }
 
-### create source connector
+### create destinations connector postgresql
 
 POST {{BO.Apis_HostAddress }}/connectors/destinations/postgresql
 content-type: application/json
 
 {
+  "appName": "postgresql",
   "name": "northwind_replication_1",
   "topicPattern": "^bo_connector_northwind_.*_topic$",
   "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
@@ -26,7 +27,7 @@ content-type: application/json
   "kafkaServer": "localhost:29092"
 }
 
-### create source connector_ category
+### create destinations connector postgresql _ category
 
 POST {{BO.Apis_HostAddress }}/connectors/destinations/postgresql
 content-type: application/json
@@ -36,5 +37,18 @@ content-type: application/json
   "Topics": "bo_connector_northwind_categories_topic,bo_connector_northwind_customers_topic",
   "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
   "schema": "northwind_replication_2",
+  "kafkaServer": "localhost:29092"
+}
+
+### create destinations connector bigquery
+
+POST {{BO.Apis_HostAddress }}/connectors/destinations/bigquery
+content-type: application/json
+
+{
+  "name": "northwind_bigquery",
+  "Topics": "bo_connector_northwind_categories_topic,bo_connector_northwind_customers_topic",
+  "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
+  "schema": "northwind_bigquery",
   "kafkaServer": "localhost:29092"
 }

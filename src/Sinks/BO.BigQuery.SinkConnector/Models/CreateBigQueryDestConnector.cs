@@ -1,12 +1,13 @@
 ﻿using BO.Core;
-using BO.Core.Models;
 using BO.Core.Entities.Enums;
+using BO.Core.Models;
 
-namespace BO.PG.SourceConnector.Models;
+namespace BO.BigQuery.SinkConnector.Models;
 
-public class CreatePGDestConnector : ConnectorBaseModel
+public class CreateBigQueryDestConnector : ConnectorBaseModel
 {
-	public override string AppName => Constants.AppNames.POSTGRESQL;
+	public override string AppName => Constants.AppNames.BIGQUERY;
+
 	public required string Schema { get; set; }
 	public string? Topics { get; set; }
 	public string? TopicPattern { get; set; }
@@ -16,7 +17,7 @@ public class CreatePGDestConnector : ConnectorBaseModel
 
 	public Dictionary<string, object> Consumer => new Dictionary<string, object>
 	{
-		{ "groupId", $"bo_pg_sink_connector-{Schema}".ToLower() },
+		{ "groupId", $"bo_bq_sink_connector-{Schema}".ToLower() },
 		{ "kafkaServer", KafkaServer }
 	};
 }

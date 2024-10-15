@@ -7,7 +7,7 @@ using BO.PG.SourceConnector.Models;
 
 namespace BO.PG.SourceConnector.Handlers;
 
-public class SrcConnectorMappingHandler : ISrcConnectorMappingHandler<CreatePGSrcConnector>
+internal class SrcConnectorMappingHandler : ISrcConnectorMappingHandler<CreatePGSrcConnector>
 {
 	public async Task<(Source Source, IEnumerable<TaskRun> TaskRuns)> HandlAsync(CreatePGSrcConnector input)
 	{

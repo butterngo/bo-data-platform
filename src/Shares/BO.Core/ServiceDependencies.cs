@@ -1,11 +1,11 @@
-﻿using BO.Core.Interfaces;
+﻿using BO.Core.Models;
+using BO.Core.Interfaces;
 using BO.Core.Repositories;
 using BO.Core.Implementations;
 using BO.PG.SourceConnector.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using BO.Core.Models;
-using System.Reflection;
+
 
 namespace BO.Core;
 
@@ -29,6 +29,10 @@ public static class ServiceDependencies
 		services.AddSingleton<ITaskRunRepository, TaskRunRepository>();
 
 		services.AddSingleton<IDestinationRepository, DestinationRepository>();
+
+		services.AddSingleton<IDestinationRepository, DestinationRepository>();
+
+		services.AddScoped<IDestinationConnectorService, DestinationConnectorService>();
 
 		return services;
 	}

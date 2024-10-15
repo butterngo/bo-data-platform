@@ -61,9 +61,9 @@ public class TaskRunBigQueryHandler : ITaskRunHandler
 			AutoOffsetReset = AutoOffsetReset.Earliest
 		});
 
-		Consumer.Consume(AppConfiguration.Topics, async message => 
+		await Consumer.Consume(AppConfiguration.Topics, async message => 
 		{
-			_logger.LogInformation("message: {@message}", message);
+			_logger.LogInformation("Bigquery message: {@message}", message.ToJsonString());
 		}, cancellationToken);
 	}
 }

@@ -1,10 +1,7 @@
 using BO.Apis;
 using BO.Core;
-using BO.Core.Interfaces;
+using BO.Connectors;
 using BO.Core.Models;
-using BO.PG.SinkConnector.Handlers;
-using BO.PG.SourceConnector.Handlers;
-using BO.PG.SourceConnector.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,9 +15,11 @@ builder.Services.AddCore(options =>
 	.Bind(options);
 });
 
-builder.Services.AddTransient<ISrcConnectorMappingHandler<CreatePGSrcConnector>, SrcConnectorMappingHandler>();
+builder.Services.AddPostgresqlSrcConnector();
 
-builder.Services.AddTransient<ISinkConnectorMappingHandler<CreatePGDestConnector>, SinkConnectorMappingHandler>();
+builder.Services.AddPostgresqlDestConnector();
+
+builder.Services.AddBigQueryDestConnector();
 
 var app = builder.Build();
 
