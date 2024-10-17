@@ -6,7 +6,6 @@ using BO.PG.SourceConnector.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-
 namespace BO.Core;
 
 public static class ServiceDependencies

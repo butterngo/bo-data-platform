@@ -99,6 +99,11 @@ internal class TaskRunRepository : ITaskRunRepository
 	WHERE id=@id and row_version=@rowVersion";
 		using var conn = _dataContext.CreateConnection();
 
-		return await conn.ExecuteAsync(sql, new { id, status = TaskRunStatus.Errored, errorMessage = error_message, rowVersion });
+		return await conn.ExecuteAsync(sql, new { id, status = TaskRunStatus.Error, errorMessage = error_message, rowVersion });
+	}
+
+	public Task<int> SetStopAsync(string id, string rowVersion, CancellationToken cancellationToken)
+	{
+		throw new NotImplementedException();
 	}
 }

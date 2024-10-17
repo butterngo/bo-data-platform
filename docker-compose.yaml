@@ -4,18 +4,19 @@
 version: "3.4"
 services:
   db:
-    container_name: grouparoo_db
+    container_name: bo_data_platform_db
     image: postgres
     restart: always
     environment:
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: grouparoo_docker
+      POSTGRES_DB: bo_data_platform_docker
     command: >
       postgres -c wal_level=logical
     ports:
       - 5432:5432
     volumes:
       - "postgres-data:/var/lib/postgresql/data"
+      - "./init-scripts:/docker-entrypoint-initdb.d"
       
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -53,7 +54,6 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181   
-
 
 volumes:
   postgres-data:      

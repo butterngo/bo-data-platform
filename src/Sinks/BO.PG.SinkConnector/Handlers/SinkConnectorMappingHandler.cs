@@ -1,8 +1,5 @@
-﻿using BO.Core;
-using BO.Core.Entities;
+﻿using BO.Core.Entities;
 using BO.Core.Implementations;
-using BO.Core.Interfaces;
-using BO.Core.Models;
 using BO.PG.SourceConnector.Models;
 
 namespace BO.PG.SinkConnector.Handlers;

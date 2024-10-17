@@ -4,7 +4,7 @@ namespace BO.Core.Entities;
 
 /// <summary>
 /*
-CREATE TABLE bo_connectors.sources (
+CREATE TABLE IF NOT EXISTS bo_connectors.sources (
 	id text NOT NULL,
 	name text NOT NULL,
 	app_configuration text NOT NULL,

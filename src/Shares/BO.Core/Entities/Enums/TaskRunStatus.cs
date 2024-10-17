@@ -4,6 +4,7 @@ public enum TaskRunStatus
 {
 	Created,
 	Running,
+	Stopped,
 	Completed,
-	Errored
+	Error
 }

@@ -1,21 +1,17 @@
-﻿using Bo.Kafka;
-using Npgsql;
+﻿using Npgsql;
+using Bo.Kafka;
 using PgOutput2Json;
 using Confluent.Kafka;
-using System.Text.Json;
 using BO.Core.Entities;
 using BO.Core.Interfaces;
+using BO.Core.Implementations;
 using BO.PG.SourceConnector.Models;
 using Microsoft.Extensions.Logging;
 
 namespace BO.PG.SourceConnector.Handlers;
 
-public class TaskRunPostgresqlHandler : ITaskRunHandler
+public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHandler>
 {
-    private readonly ILogger<TaskRunPostgresqlHandler> _logger;
-
-    private readonly ITaskRunRepository _taskRunRepository;
-
     private readonly ISourceRepository _sourceRepository;
 
 	private KafkaProducer Producer { get; set; }
@@ -24,15 +20,11 @@ public class TaskRunPostgresqlHandler : ITaskRunHandler
 
 	private IPgOutput2Json PgOutput2Json { get; set; }
 
-	private readonly ILoggerFactory _loggerFactory;
-
 	public TaskRunPostgresqlHandler(ITaskRunRepository taskRunRepository,
 		ISourceRepository sourceRepository,
 		ILoggerFactory loggerFactory)
+		:base(taskRunRepository, loggerFactory)
     {
-		_loggerFactory = loggerFactory;
-		_logger = loggerFactory.CreateLogger<TaskRunPostgresqlHandler>();
-        _taskRunRepository = taskRunRepository;
         _sourceRepository = sourceRepository;
 	}
 
@@ -102,60 +94,43 @@ public class TaskRunPostgresqlHandler : ITaskRunHandler
 		await PgOutput2Json.Start(cancellationToken);
 	}
 
-	public async Task HandleAsync(TaskRun state, CancellationToken cancellationToken)
+	protected override Task OnBeforeCompleting(TaskRun state, CancellationToken cancellationToken) 
+		=> Task.CompletedTask;
+	
+	protected override async Task DoWork(TaskRun state, CancellationToken cancellationToken)
 	{
-		try
+		var source = await _sourceRepository.GetByAsync(state.ReferenceId);
+
+		if (source == null)
 		{
-			var source = await _sourceRepository.GetByAsync(state.ReferenceId);
-
-			if (source == null)
-			{
-				throw new InvalidOperationException($"not found referenceId: {state.ReferenceId}");
-			}
-
-			AppConfiguration = PgAppConfiguration.Deserialize<PgAppConfiguration>(source.AppConfiguration);
-
-			_logger.LogInformation($"Starting data with {state.Id}");
-
-			await _taskRunRepository.SetRunningAsync(state.Id, state.RowVersion, cancellationToken);
-
-			_logger.LogInformation($"Runned {state.Id}");
-			var kafkaServer = AppConfiguration.Publisher["kafkaServer"].ToString();
-
-			_logger.LogDebug($"kafka server {kafkaServer}");
-
-			Producer = new KafkaProducer(new ProducerConfig
-			{
-				BootstrapServers = kafkaServer
-			});
-
-			if (state.IsCdcData)
-			{
-				_logger.LogInformation($"Staring Consume data from Publication: {AppConfiguration.PublicationName} and Slot: {AppConfiguration.SlotName}");
-
-				await ProduceAsync(state, cancellationToken);
-
-				await _taskRunRepository.SetCompletedAsync(state.Id, state.RowVersion, cancellationToken);
-			}
-			else
-			{
-				await FirstLoadAsync(state, cancellationToken);
-
-				await _taskRunRepository.SetCompletedAsync(state.Id, state.RowVersion, cancellationToken);
-			}
+			throw new InvalidOperationException($"not found referenceId: {state.ReferenceId}");
 		}
-		catch (Exception ex) 
+
+		AppConfiguration = PgAppConfiguration.Deserialize<PgAppConfiguration>(source.AppConfiguration);
+
+		_logger.LogInformation($"Runned {state.Id}");
+		var kafkaServer = AppConfiguration.Publisher["kafkaServer"].ToString();
+
+		_logger.LogDebug($"kafka server {kafkaServer}");
+
+		Producer = new KafkaProducer(new ProducerConfig
 		{
-			await _taskRunRepository.SetErrorAsync(state.Id, state.RowVersion, JsonSerializer.Serialize(new
-			{
-				message = $"{ex.Message}",
-				stackTrace = $"{ex.StackTrace}",
-			}), cancellationToken);
-			throw;
+			BootstrapServers = kafkaServer
+		});
+
+		if (state.IsCdcData)
+		{
+			_logger.LogInformation($"Staring Consume data from Publication: {AppConfiguration.PublicationName} and Slot: {AppConfiguration.SlotName}");
+
+			await ProduceAsync(state, cancellationToken);
+		}
+		else
+		{
+			await FirstLoadAsync(state, cancellationToken);
 		}
 	}
 
-	public void Dispose()
+	protected override void Dispose(bool isDispose)
 	{
 		PgOutput2Json?.Dispose();
 

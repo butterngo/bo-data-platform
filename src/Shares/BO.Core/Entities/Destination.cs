@@ -4,7 +4,7 @@ namespace BO.Core.Entities;
 
 /// <summary>
 /*
-CREATE TABLE bo_connectors.destinations (
+CREATE TABLE IF NOT EXISTS bo_connectors.destinations (
 	id text NOT NULL,
 	name text NOT NULL,
 	app_configuration text NOT NULL,

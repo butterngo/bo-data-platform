@@ -6,7 +6,7 @@ namespace BO.Core.Entities;
 
 /// <summary>
 /*
- * CREATE TABLE bo_connectors.task_runs (
+ * CREATE TABLE IF NOT EXISTS bo_connectors.task_runs (
 	id text NOT NULL,
 	name text NOT NULL,
     app_name text NOT NULL,
@@ -16,6 +16,7 @@ namespace BO.Core.Entities;
     is_cdc_data BOOLEAN NOT NULL,
 	created_at timestamp,
 	completed_at timestamp,
+    stopped_at timestamp,
 	runned_at timestamp,
 	occurred_at timestamp,
 	error_message text NULL,
@@ -34,7 +35,8 @@ public class TaskRun : EntityBase, ITaskRun
 	public TaskRunType Type { get; set; }
 	public bool IsCdcData { get; set; }
 	public DateTime CreatedAt { get; set; }
-	public DateTime RunnedAt { get; set; }
+	public DateTime? RunnedAt { get; set; }
+	public DateTime? StoppedAt { get; set; }
 	public DateTime? CompletedAt { get; set; }
 	public DateTime? OccurredAt { get; set; }
 	public string? ErrorMessage { get; set; }
@@ -58,6 +60,7 @@ public static class TaskRunSchema
 		public static string Type { get; } = nameof(TaskRun.Type).ToSnakeCase();
 		public static string IsCdcData { get; } = nameof(TaskRun.IsCdcData).ToSnakeCase();
 		public static string CreatedAt { get; } = nameof(TaskRun.CreatedAt).ToSnakeCase();
+		public static string StoppedAt { get; } = nameof(TaskRun.StoppedAt).ToSnakeCase();
 		public static string CompletedAt { get; } = nameof(TaskRun.CompletedAt).ToSnakeCase();
 		public static string RunnedAt { get; } = nameof(TaskRun.RunnedAt).ToSnakeCase();
 		public static string OccurredAt { get; } = nameof(TaskRun.OccurredAt).ToSnakeCase();
