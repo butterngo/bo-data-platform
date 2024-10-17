@@ -7,6 +7,7 @@ using BO.Core.Interfaces;
 using BO.Core.Implementations;
 using BO.PG.SourceConnector.Models;
 using Microsoft.Extensions.Logging;
+using Bo.Kafka.Models;
 
 namespace BO.PG.SourceConnector.Handlers;
 
@@ -14,7 +15,7 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 {
     private readonly ISourceRepository _sourceRepository;
 
-	private KafkaProducer Producer { get; set; }
+	private AvroKafkaProducer Producer { get; set; }
 
 	private PgAppConfiguration AppConfiguration { get; set; }
 
@@ -113,10 +114,19 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 
 		_logger.LogDebug($"kafka server {kafkaServer}");
 
-		Producer = new KafkaProducer(new ProducerConfig
+		var kafkaOptions = new KafkaOptions
 		{
-			BootstrapServers = kafkaServer
-		});
+			ProducerConfig = new ProducerConfig
+			{
+				BootstrapServers = kafkaServer
+			},
+			SchemaRegistryConfig = new Confluent.SchemaRegistry.SchemaRegistryConfig 
+			{
+				Url = "http://localhost:8081"
+			}
+		};
+
+		Producer = new AvroKafkaProducer(kafkaOptions);
 
 		if (state.IsCdcData)
 		{

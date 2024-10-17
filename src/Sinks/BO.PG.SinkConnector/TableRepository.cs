@@ -13,7 +13,7 @@ public class TableRepository
 		return new NpgsqlConnection(connectionString);
 	}
 
-	public string ConvertTableName(KafkaMessage kafkaMessage, string tableSchema) 
+	public string ConvertTableName(KafkaMessageGenerator kafkaMessage, string tableSchema) 
 	{
 		if (!kafkaMessage.source.ContainsKey("table"))
 		{
@@ -133,7 +133,7 @@ public class TableRepository
 		await conn.ExecuteAsync($"CREATE SCHEMA IF NOT EXISTS {SchemaName};");
 	}
 
-	public async Task InsertAsync(string connectionString, string tableName, KafkaMessage kafkaMessage, CancellationToken cancellationToken) 
+	public async Task InsertAsync(string connectionString, string tableName, KafkaMessageGenerator kafkaMessage, CancellationToken cancellationToken) 
 	{
 		using var conn = CreateConnection(connectionString);
 
@@ -156,7 +156,7 @@ public class TableRepository
 		}
 	}
 
-	public async Task UpdateAsync(string connectionString, string tableName, KafkaMessage kafkaMessage, CancellationToken cancellationToken) 
+	public async Task UpdateAsync(string connectionString, string tableName, KafkaMessageGenerator kafkaMessage, CancellationToken cancellationToken) 
 	{
 		using var conn = CreateConnection(connectionString);
 
@@ -182,7 +182,7 @@ public class TableRepository
 		}
 	}
 
-	public async Task UpsertAsync(string connectionString, string tableName, KafkaMessage kafkaMessage)
+	public async Task UpsertAsync(string connectionString, string tableName, KafkaMessageGenerator kafkaMessage)
 	{
 		using var conn = CreateConnection(connectionString);
 
@@ -193,12 +193,12 @@ public class TableRepository
 		await conn.ExecuteAsync(GenerateUpsertScript(tableName, kafkaMessage.payload, primaryField.field));
 	}
 
-	public Task DeleteAsync(string connectionString, KafkaMessage kafkaMessage) 
+	public Task DeleteAsync(string connectionString, KafkaMessageGenerator kafkaMessage) 
 	{
 		throw new NotImplementedException();
 	}
 
-	private KafkaMessageField GetPrimaryField(KafkaMessage kafkaMessage) 
+	private KafkaMessageField GetPrimaryField(KafkaMessageGenerator kafkaMessage) 
 	{
 		return kafkaMessage.schema.fields.FirstOrDefault(x => x.isPrimary);
 	}

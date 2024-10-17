@@ -23,6 +23,7 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 		TableRepository tableRepository)
 		:base(taskRunRepository, loggerFactory)
 	{
+		_tableRepository = tableRepository;
 		_destinationRepository = destinationRepository;
 	}
 
@@ -31,7 +32,7 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 		Consumer?.Dispose();
 	}
 
-	private async Task ExecuteAsync(KafkaMessage kafkaMessage, CancellationToken cancellationToken)
+	private async Task ExecuteAsync(KafkaMessageGenerator kafkaMessage, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
@@ -92,7 +93,7 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 			{
 				_logger.LogDebug("message: {@message}", message);
 
-				await ExecuteAsync(message, cancellationToken);
+				//await ExecuteAsync(message, cancellationToken);
 
 			}, cancellationToken);
 
@@ -104,7 +105,7 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 			{
 				_logger.LogDebug("message: {@message}", message);
 
-				await ExecuteAsync(message, cancellationToken);
+				//await ExecuteAsync(message, cancellationToken);
 
 			}, cancellationToken);
 		}

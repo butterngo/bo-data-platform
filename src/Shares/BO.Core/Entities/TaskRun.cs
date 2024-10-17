@@ -4,28 +4,6 @@ using BO.Core.Interfaces;
 
 namespace BO.Core.Entities;
 
-/// <summary>
-/*
- * CREATE TABLE IF NOT EXISTS bo_connectors.task_runs (
-	id text NOT NULL,
-	name text NOT NULL,
-    app_name text NOT NULL,
-	reference_id text NOT NULL,
-	status int2 NOT NULL,
-	type int2 NOT NULL,
-    is_cdc_data BOOLEAN NOT NULL,
-	created_at timestamp,
-	completed_at timestamp,
-    stopped_at timestamp,
-	runned_at timestamp,
-	occurred_at timestamp,
-	error_message text NULL,
-	row_version text NOT NULL,
-	UNIQUE (id, status),
-	CONSTRAINT pk_task_runs  PRIMARY KEY (id)
-)
- */
-/// </summary>
 public class TaskRun : EntityBase, ITaskRun
 {
 	public required string Name { get; set; }

@@ -27,7 +27,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{6089D32A
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BO.PG.SinkConnector.Test", "Tests\BO.PG.SinkConnector.Test\BO.PG.SinkConnector.Test.csproj", "{F55E1ABA-53AB-4490-BEC0-12398714058D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BO.Core.Tests", "Tests\BO.Core.Tests\BO.Core.Tests.csproj", "{2B18907C-4913-44C2-B5F5-D1DFB00AECDA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BO.Core.Tests", "Tests\BO.Core.Tests\BO.Core.Tests.csproj", "{2B18907C-4913-44C2-B5F5-D1DFB00AECDA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bo.Kafka.Test", "Tests\Bo.Kafka.Test\Bo.Kafka.Test.csproj", "{DA1EFE59-9DED-40F1-9FC3-FC8713064D37}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -71,6 +73,10 @@ Global
 		{2B18907C-4913-44C2-B5F5-D1DFB00AECDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B18907C-4913-44C2-B5F5-D1DFB00AECDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2B18907C-4913-44C2-B5F5-D1DFB00AECDA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA1EFE59-9DED-40F1-9FC3-FC8713064D37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA1EFE59-9DED-40F1-9FC3-FC8713064D37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA1EFE59-9DED-40F1-9FC3-FC8713064D37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA1EFE59-9DED-40F1-9FC3-FC8713064D37}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -83,6 +89,7 @@ Global
 		{0EBC1B54-F220-46A8-BA71-95976E4818C1} = {CB2A0F3A-D3EA-4105-BCB3-F3762A6935A6}
 		{F55E1ABA-53AB-4490-BEC0-12398714058D} = {6089D32A-0B33-45DA-93FF-AA04366240F4}
 		{2B18907C-4913-44C2-B5F5-D1DFB00AECDA} = {6089D32A-0B33-45DA-93FF-AA04366240F4}
+		{DA1EFE59-9DED-40F1-9FC3-FC8713064D37} = {6089D32A-0B33-45DA-93FF-AA04366240F4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {56CB7C5A-6302-4E45-9D2A-75B9B240520B}

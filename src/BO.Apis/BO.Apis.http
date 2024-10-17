@@ -7,7 +7,7 @@ content-type: application/json
 
 {
   "name": "test",
-  "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
+  "connectionString": "Host=localhost:5432;Database=bo_data_platform_docker;Username=postgres;Password=password",
   "schema": "northwind",
   "tables": "categories,customers,orders,order_details",
   "kafkaServer": "localhost:29092"
@@ -22,7 +22,7 @@ content-type: application/json
   "appName": "postgresql",
   "name": "northwind_replication_1",
   "topicPattern": "^bo_connector_northwind_.*_topic$",
-  "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
+  "connectionString": "Host=localhost:5432;Database=bo_data_platform_docker;Username=postgres;Password=password",
   "schema": "northwind_replication_1",
   "kafkaServer": "localhost:29092"
 }
@@ -35,7 +35,7 @@ content-type: application/json
 {
   "name": "northwind_replication_2",
   "Topics": "bo_connector_northwind_categories_topic,bo_connector_northwind_customers_topic",
-  "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
+  "connectionString": "Host=localhost:5432;Database=bo_data_platform_docker;Username=postgres;Password=password",
   "schema": "northwind_replication_2",
   "kafkaServer": "localhost:29092"
 }
@@ -48,7 +48,7 @@ content-type: application/json
 {
   "name": "northwind_bigquery",
   "Topics": "bo_connector_northwind_categories_topic,bo_connector_northwind_customers_topic",
-  "connectionString": "Host=localhost:5432;Database=grouparoo_docker;Username=postgres;Password=password",
+  "connectionString": "Host=localhost:5432;Database=bo_data_platform_docker;Username=postgres;Password=password",
   "schema": "northwind_bigquery",
   "kafkaServer": "localhost:29092"
 }

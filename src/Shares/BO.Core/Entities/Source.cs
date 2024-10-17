@@ -3,16 +3,6 @@
 namespace BO.Core.Entities;
 
 /// <summary>
-/*
-CREATE TABLE IF NOT EXISTS bo_connectors.sources (
-	id text NOT NULL,
-	name text NOT NULL,
-	app_configuration text NOT NULL,
-	created_at timestamp,
-	UNIQUE (name),
-	CONSTRAINT pk_sources  PRIMARY KEY (id)
-)
- */
 ///https://debezium.io/documentation/reference/stable/connectors/mysql.html
 /// </summary>
 public class Source: EntityBase

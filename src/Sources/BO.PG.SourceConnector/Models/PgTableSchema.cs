@@ -4,13 +4,15 @@ using System.Text;
 using BO.Core.Models;
 using Bo.Kafka.Models;
 using System.Text.Json.Nodes;
+using static Npgsql.Replication.PgOutput.Messages.RelationMessage;
+using Newtonsoft.Json.Linq;
 
 namespace BO.PG.SourceConnector.Models;
 
 public class PgTableSchema : TableSchemaBase
 {
 	public PgTableSchema() { }
-	public PgTableSchema(string tableSchame, string tableName, IEnumerable<ColumnDescriptor> columnDescriptors) 
+	public PgTableSchema(string tableSchame, string tableName, IEnumerable<ColumnDescriptor> columnDescriptors)
 		: base(tableSchame, tableName, columnDescriptors)
 	{
 	}
@@ -21,20 +23,20 @@ public class PgTableSchema : TableSchemaBase
 		{
 			return (NpgsqlDbType)Enum.Parse(typeof(NpgsqlDbType), value, true);
 		}
-		catch 
+		catch
 		{
 			return NpgsqlDbType.Unknown;
 		}
 	}
 
-	public KafkaMessage SerializeKafkaMessage(string json)
+	public KafkaMessageGenerator SerializeKafkaMessage(string json)
 	{
 		var jObj = JsonObject.Parse(json);
-		var kafkaMessage = new KafkaMessage
+		var kafkaMessage = new KafkaMessageGenerator
 		{
 			op = jObj["_ct"].GetValue<string>(),
 			ts_ms = Convert.ToInt64(jObj["_mts"].GetValue<string>()),
-			source = new Dictionary<string, object> 
+			source = new Dictionary<string, object>
 			{
 				{ "table", jObj["_tbl"].GetValue<string>() }
 			}
@@ -46,28 +48,20 @@ public class PgTableSchema : TableSchemaBase
 			{
 				case NpgsqlDbType.Bigint:
 					{
-						kafkaMessage.SetValue(column.Field, "int64", jObj[column.Field].GetValue<long>(), column.IsPrimary, column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "long", jObj[column.Field].GetValue<long>(), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Double:
+				case NpgsqlDbType.Numeric:
+				case NpgsqlDbType.Money:
 					{
 						kafkaMessage.SetValue(column.Field, "double", jObj[column.Field].GetValue<double>(), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Real:
-					{
-						kafkaMessage.SetValue(column.Field, "float", jObj[column.Field].GetValue<float>(), column.IsPrimary, column.IsNullable);
-						break;
-					}
-				case NpgsqlDbType.Numeric:
-				case NpgsqlDbType.Money:
-					{
-						kafkaMessage.SetValue(column.Field, "decimal", jObj[column.Field].GetValue<decimal>(), column.IsPrimary, column.IsNullable);
-						break;
-					}
 				case NpgsqlDbType.Smallint:
 					{
-						kafkaMessage.SetValue(column.Field, "int32", jObj[column.Field].GetValue<int>(), column.IsPrimary, column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "int", jObj[column.Field].GetValue<int>(), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Bytea:
@@ -86,11 +80,11 @@ public class PgTableSchema : TableSchemaBase
 		return kafkaMessage;
 	}
 
-	public KafkaMessage SerializeKafkaMessage(object obj, string table)
+	public KafkaMessageGenerator SerializeKafkaMessage(object obj, string table)
 	{
 		var reader = obj as NpgsqlBinaryExporter;
 
-		var kafkaMessage = new KafkaMessage
+		var kafkaMessage = new KafkaMessageGenerator
 		{
 			source = new Dictionary<string, object>
 			{
@@ -123,28 +117,20 @@ public class PgTableSchema : TableSchemaBase
 			{
 				case NpgsqlDbType.Bigint:
 					{
-						kafkaMessage.SetValue(column.Field, "int64", GetValue<long>(reader, NpgsqlDbType.Bigint), column.IsPrimary, column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "long", GetValue<long>(reader, NpgsqlDbType.Bigint), column.IsPrimary, column.IsNullable);
 						break;
 					}
+				case NpgsqlDbType.Numeric:
+				case NpgsqlDbType.Money:
 				case NpgsqlDbType.Double:
 					{
 						kafkaMessage.SetValue(column.Field, "double", GetValue<double>(reader, NpgsqlDbType.Double), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Real:
-					{
-						kafkaMessage.SetValue(column.Field, "decimal", GetValue<float>(reader, NpgsqlDbType.Real), column.IsPrimary, column.IsNullable);
-						break;
-					}
-				case NpgsqlDbType.Numeric:
-				case NpgsqlDbType.Money:
-					{
-						kafkaMessage.SetValue(column.Field, "decimal", GetValue<decimal>(reader, NpgsqlDbType.Numeric), column.IsPrimary, column.IsNullable);
-						break;
-					}
 				case NpgsqlDbType.Smallint:
 					{
-						kafkaMessage.SetValue(column.Field, "int32", GetValue<int>(reader, NpgsqlDbType.Smallint), column.IsPrimary, column.IsNullable);
+						kafkaMessage.SetValue(column.Field, "int", GetValue<int>(reader, NpgsqlDbType.Smallint), column.IsPrimary, column.IsNullable);
 						break;
 					}
 				case NpgsqlDbType.Bytea:

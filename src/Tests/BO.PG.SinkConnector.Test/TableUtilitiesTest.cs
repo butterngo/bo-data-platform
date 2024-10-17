@@ -10,7 +10,7 @@ public class TableUtilitiesTest
 	{
 		var json = File.ReadAllText(Path.Combine("TestData", "kafka_message.json"));
 
-		var kafkaMessage = JsonSerializer.Deserialize<KafkaMessage>(json);
+		var kafkaMessage = JsonSerializer.Deserialize<KafkaMessageGenerator>(json);
 
 		//var sciprt = TableUtilities.GenerateInsertScript(kafkaMessage.source["table"].ToString(), kafkaMessage.payload);
 

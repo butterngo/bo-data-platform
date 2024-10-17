@@ -55,7 +55,6 @@ public abstract class TaskRunBaseHandler<T> : ITaskRunHandler
 	public void Dispose()
 	{
 		Dispose(true);
-		_taskRunRepository.SetStopAsync(State.Id, State.RowVersion, CancellationToken.None).Wait();
 	}
 
 	protected abstract void Dispose(bool isDispose);
