@@ -1,5 +1,6 @@
 using BO.Apis;
 using BO.Core;
+using Bo.Kafka;
 using BO.Connectors;
 using BO.Core.Models;
 
@@ -15,11 +16,17 @@ builder.Services.AddCore(options =>
 	.Bind(options);
 });
 
+builder.Services.AddKafka(options => 
+{
+	builder.Configuration.GetSection("Kafka")
+	.Bind(options);
+});
+
 builder.Services.AddPostgresqlSrcConnector();
 
-builder.Services.AddPostgresqlDestConnector();
+//builder.Services.AddPostgresqlDestConnector();
 
-builder.Services.AddBigQueryDestConnector();
+//builder.Services.AddBigQueryDestConnector();
 
 var app = builder.Build();
 

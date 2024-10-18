@@ -1,9 +1,10 @@
-﻿using BO.Core;
+﻿using Npgsql;
+using BO.Core;
 using BO.Core.Entities;
 using BO.Core.Extensions;
 using BO.Core.Implementations;
+using Confluent.SchemaRegistry;
 using BO.PG.SourceConnector.Models;
-using Npgsql;
 
 namespace BO.PG.SourceConnector.Handlers;
 

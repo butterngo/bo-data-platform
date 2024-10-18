@@ -2,6 +2,7 @@
 using BO.Core.Interfaces;
 using BO.PG.SourceConnector.Models;
 using BO.BigQuery.SinkConnector.Models;
+using Confluent.SchemaRegistry;
 
 namespace BO.Apis;
 

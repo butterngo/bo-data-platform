@@ -1,62 +1,42 @@
-﻿using Avro;
-using Avro.Generic;
+﻿using Avro.Generic;
 using Bo.Kafka.Models;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Bo.Kafka;
 
-public class AvroKafkaProducer : IDisposable
+public interface IKafkaProducer : IDisposable
 {
-	private readonly IProducer<Null, GenericRecord> _producer;
+	Task ProduceAsync(string topic, string key, GenericRecord message, CancellationToken cancellationToken = default(CancellationToken));
+}
 
-	private readonly CachedSchemaRegistryClient _schemaRegistry;
+internal class AvroKafkaProducer : IKafkaProducer
+{
+	private readonly IProducer<string, GenericRecord> _producer;
 
-	public AvroKafkaProducer(KafkaOptions kafkaOptions)
+	public Func<ProduceException<string, GenericRecord>, Task> OnError { get; set; }
+
+	public AvroKafkaProducer(KafkaOptions kafkaOptions, ISchemaRegistryClient schemaRegistryClient)
 	{
+		var avroSerializerConfig = new AvroSerializerConfig();
 
-		var schemaRegistryConfig = new SchemaRegistryConfig
-		{
-			Url = "http://localhost:8081"
-		};
-
-		_schemaRegistry = new CachedSchemaRegistryClient(kafkaOptions.SchemaRegistryConfig);
-
-		var avroSerializerConfig = new AvroSerializerConfig
-		{
-			AutoRegisterSchemas = true
-		};
-
-		_producer = new ProducerBuilder<Null, GenericRecord>(kafkaOptions.ProducerConfig)
-			.SetValueSerializer(new AvroSerializer<GenericRecord>(_schemaRegistry, avroSerializerConfig))
+		_producer = new ProducerBuilder<string, GenericRecord>(kafkaOptions.ProducerConfig)
+			.SetValueSerializer(new AvroSerializer<GenericRecord>(schemaRegistryClient, avroSerializerConfig))
 			.Build();
 	}
 
-	public async Task<DeliveryResult<Null, GenericRecord>> ProduceAsync(string topic, KafkaMessageGenerator message, CancellationToken cancellationToken = default(CancellationToken))
+	public async Task ProduceAsync(string topic, string key, GenericRecord message, CancellationToken cancellationToken = default(CancellationToken))
 	{
-		message.schema.fields.Add(new KafkaMessageField("op", "string"));
-		message.schema.fields.Add(new KafkaMessageField("ts_ms", "long"));
-		
-		var record = new GenericRecord(message.schema.GenerateAvroSchema());
-		record.Add("op", message.op);
-		record.Add("ts_ms", message.ts_ms);
-
-		foreach (var field in message.payload)
+		await _producer.ProduceAsync(topic, new Message<string, GenericRecord>
 		{
-			record.Add(field.Key, field.Value);
-		}
-		
-		return await _producer.ProduceAsync(topic, new Message<Null, GenericRecord> 
-		{
-			Value = record
+			Key = key,
+			Value = message
 		}, cancellationToken);
 	}
 
 	public void Dispose()
 	{
 		_producer.Dispose();
-		_schemaRegistry.Dispose();
 	}
 }

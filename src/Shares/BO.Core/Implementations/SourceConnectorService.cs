@@ -1,6 +1,6 @@
-﻿using BO.Core.Entities;
+﻿using BO.Core.Models;
+using BO.Core.Entities;
 using BO.Core.Interfaces;
-using BO.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace BO.Core.Implementations;

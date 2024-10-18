@@ -1,6 +1,5 @@
 ﻿
 using Avro;
-using Microsoft.VisualBasic.FileIO;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -18,6 +17,18 @@ public record struct KafkaMessageSchema(string name, List<KafkaMessageField> fie
 		return item.isPrimary;
 	}
 
+	 //return type switch
+							//{
+							//	"null" => new PrimitiveSchema(Type.Null, props),
+							//	"boolean" => new PrimitiveSchema(Type.Boolean, props),
+							//	"int" => new PrimitiveSchema(Type.Int, props),
+							//	"long" => new PrimitiveSchema(Type.Long, props),
+							//	"float" => new PrimitiveSchema(Type.Float, props),
+							//	"double" => new PrimitiveSchema(Type.Double, props),
+							//	"bytes" => new PrimitiveSchema(Type.Bytes, props),
+							//	"string" => new PrimitiveSchema(Type.String, props),
+							//	_ => null,
+							//};
 	public RecordSchema GenerateAvroSchema()
 	{
 		var options = new JsonWriterOptions
@@ -28,7 +39,6 @@ public record struct KafkaMessageSchema(string name, List<KafkaMessageField> fie
 
 		using var stream = new MemoryStream();
 		using var writer = new Utf8JsonWriter(stream, options);
-
 		writer.WriteStartObject();
 		writer.WriteString("type", "record");
 		writer.WriteString("name", "test");

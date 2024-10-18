@@ -1,13 +1,12 @@
-﻿using Npgsql;
-using Bo.Kafka;
+﻿using Bo.Kafka;
 using PgOutput2Json;
+using Avro.Generic;
 using Confluent.Kafka;
 using BO.Core.Entities;
 using BO.Core.Interfaces;
 using BO.Core.Implementations;
 using BO.PG.SourceConnector.Models;
 using Microsoft.Extensions.Logging;
-using Bo.Kafka.Models;
 
 namespace BO.PG.SourceConnector.Handlers;
 
@@ -15,7 +14,7 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 {
     private readonly ISourceRepository _sourceRepository;
 
-	private AvroKafkaProducer Producer { get; set; }
+	private IKafkaProducer Producer { get; set; }
 
 	private PgAppConfiguration AppConfiguration { get; set; }
 
@@ -23,32 +22,33 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 
 	public TaskRunPostgresqlHandler(ITaskRunRepository taskRunRepository,
 		ISourceRepository sourceRepository,
+		IKafkaProducer producer,
 		ILoggerFactory loggerFactory)
 		:base(taskRunRepository, loggerFactory)
     {
-        _sourceRepository = sourceRepository;
+		Producer = producer;
+		_sourceRepository = sourceRepository;
 	}
-
-    private async Task FirstLoadAsync(TaskRun state, CancellationToken cancellationToken) 
+	
+	private async Task FirstLoadAsync(TaskRun state, CancellationToken cancellationToken) 
     {
 		var tableSchema = AppConfiguration.Tables.First(x => x.Id == state.Id);
 
-		var conn = new NpgsqlConnection(AppConfiguration.ConnectionString);
+		var postgresReader = new PostgresReader(AppConfiguration.ConnectionString);
 
-		var sql = $"COPY {tableSchema.QualifiedName} ({tableSchema.GetStrColumnName()}) TO STDOUT (FORMAT BINARY)";
+		var sql = $@"select * from {tableSchema.QualifiedName}";
 
-		conn.Open();
-
-		using (var reader = conn.BeginBinaryExport(sql))
+		await foreach (var item in postgresReader.ReadData(sql, cancellationToken)) 
 		{
-			while (true)
+			try
 			{
-				if (reader.StartRow() == -1)
-				{
-					break;
-				}
+				item.Add("_ct", "I");
 
-				await Producer.ProduceAsync(tableSchema.Topic, tableSchema.SerializeKafkaMessage(reader, tableSchema.QualifiedName), cancellationToken);
+				await Producer.ProduceAsync(tableSchema.Topic, $"{tableSchema.QualifiedName}_{DateTime.Now.Ticks}", tableSchema.SerializeKafkaMessage(item), cancellationToken);
+			}
+			catch (ProduceException<string, GenericRecord> ex)
+			{
+				_logger.LogError($"Message: {ex.Message} StackTrace: {ex.StackTrace}");
 			}
 		}
 	}
@@ -67,11 +67,6 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 			.WithPgConnectionString(AppConfiguration.ConnectionString)
 			.WithPgPublications(AppConfiguration.PublicationName)
 			.WithPgReplicationSlot(AppConfiguration.SlotName)
-			.WithJsonOptions(options =>
-			{
-				options.WriteTableNames = true;
-				options.WriteTimestamps = true;
-			})
 			.WithMessageHandler(async (json, table, key, partition) =>
 			{
 				var pgtable = AppConfiguration.Tables.FirstOrDefault(x => x.QualifiedName.Equals(table));
@@ -86,7 +81,16 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 
 					_logger.LogInformation($"Topic: {topic} table: {table}, json: {json}");
 
-					await Producer.ProduceAsync(topic, pgtable.SerializeKafkaMessage(json), cancellationToken);
+					try 
+					{
+						var item = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+
+						await Producer.ProduceAsync(topic, $"{pgtable.QualifiedName}_{DateTime.Now.Ticks}", pgtable.SerializeKafkaMessage(item), cancellationToken);
+					}
+					catch (ProduceException<string, GenericRecord> ex)
+					{
+						_logger.LogError($"Message: {ex.Message} StackTrace: {ex.StackTrace}");
+					}
 				}
 			});
 
@@ -108,25 +112,6 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 		}
 
 		AppConfiguration = PgAppConfiguration.Deserialize<PgAppConfiguration>(source.AppConfiguration);
-
-		_logger.LogInformation($"Runned {state.Id}");
-		var kafkaServer = AppConfiguration.Publisher["kafkaServer"].ToString();
-
-		_logger.LogDebug($"kafka server {kafkaServer}");
-
-		var kafkaOptions = new KafkaOptions
-		{
-			ProducerConfig = new ProducerConfig
-			{
-				BootstrapServers = kafkaServer
-			},
-			SchemaRegistryConfig = new Confluent.SchemaRegistry.SchemaRegistryConfig 
-			{
-				Url = "http://localhost:8081"
-			}
-		};
-
-		Producer = new AvroKafkaProducer(kafkaOptions);
 
 		if (state.IsCdcData)
 		{
