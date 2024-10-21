@@ -20,45 +20,6 @@ public class PgTableSchema : TableSchemaBase
 	{
 	}
 
-	private string _jsonAvroSchema;
-
-	[JsonIgnore]
-	public string JsonAvroSchema 
-	{
-		get 
-		{
-			if (string.IsNullOrEmpty(_jsonAvroSchema))
-			{
-				var options = new JsonWriterOptions
-				{
-					Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-					Indented = true
-				};
-
-				using var stream = new MemoryStream();
-				using var writer = new Utf8JsonWriter(stream, options);
-				writer.WriteStartObject();
-				writer.WriteString("type", "record");
-				writer.WriteString("name", QualifiedName);
-				writer.WriteString("namespace", "BO.PG.SourceConnector.Convertor");
-				writer.WritePropertyName("fields");
-				writer.WriteStartArray();
-				WriteObject(writer, new ColumnDescriptor { Field = "op", Type = "string" });
-				WriteObject(writer, new ColumnDescriptor { Field = "ts_ms", Type = NpgsqlDbType.Timestamp.ToString() });
-				foreach (var column in ColumnDescriptors)
-				{
-					WriteObject(writer, column);
-				}
-				writer.WriteEndArray();
-				writer.WriteEndObject();
-				writer.Flush();
-
-				_jsonAvroSchema = Encoding.UTF8.GetString(stream.ToArray());
-			}
-			return _jsonAvroSchema;
-		}
-	}
-
 	private static string GetLogicalType(NpgsqlDbType npgsqlDbType)
 	{
 		switch (npgsqlDbType)
@@ -82,6 +43,7 @@ public class PgTableSchema : TableSchemaBase
 				}
 		}
 	}
+	
 	private void WriteObject(Utf8JsonWriter writer, ColumnDescriptor column) 
 	{
 		writer.WriteStartObject();
@@ -194,5 +156,34 @@ public class PgTableSchema : TableSchemaBase
 		{
 			return null;
 		}
+	}
+
+	protected override string GenerateAvroSchema()
+	{
+		var options = new JsonWriterOptions
+		{
+			Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+			Indented = true
+		};
+
+		using var stream = new MemoryStream();
+		using var writer = new Utf8JsonWriter(stream, options);
+		writer.WriteStartObject();
+		writer.WriteString("type", "record");
+		writer.WriteString("name", QualifiedName);
+		writer.WriteString("namespace", "BO.PG.SourceConnector.Convertor");
+		writer.WritePropertyName("fields");
+		writer.WriteStartArray();
+		WriteObject(writer, new ColumnDescriptor { Field = "op", Type = "string" });
+		WriteObject(writer, new ColumnDescriptor { Field = "ts_ms", Type = NpgsqlDbType.Timestamp.ToString() });
+		foreach (var column in ColumnDescriptors)
+		{
+			WriteObject(writer, column);
+		}
+		writer.WriteEndArray();
+		writer.WriteEndObject();
+		writer.Flush();
+
+		return Encoding.UTF8.GetString(stream.ToArray());
 	}
 }

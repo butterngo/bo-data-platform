@@ -1,15 +1,27 @@
-﻿using Bo.Kafka;
+﻿using Npgsql;
+using Bo.Kafka;
 using PgOutput2Json;
 using BO.Core.Entities;
+using BO.Core.Extensions;
 using BO.Core.Interfaces;
 using BO.Core.Implementations;
 using BO.PG.SourceConnector.Models;
 using Microsoft.Extensions.Logging;
-using Npgsql;
-using BO.Core.Extensions;
-using System.Threading;
+using Confluent.Kafka;
+using System.Threading.Tasks.Dataflow;
+using Avro.Generic;
 
 namespace BO.PG.SourceConnector.Handlers;
+
+internal record CdcDataInput(string json, string table, int partition) 
+{
+	public string key { get; set; }
+}
+
+internal record CdcDataOutput(string topic, string key) 
+{
+	public GenericRecord payload { get; set; }
+}
 
 public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHandler>
 {
@@ -56,62 +68,67 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 			AppConfiguration.PublicationName,
 			AppConfiguration.SlotName, tables, cancellationToken);
 
-		async Task PublishAsync(PgTableSchema pgtable, string json)
+		var dataflowLinkOptions = new DataflowLinkOptions { PropagateCompletion = true };
+		var executionDataflowBlockOptions = new ExecutionDataflowBlockOptions 
 		{
+			CancellationToken = cancellationToken,
+			BoundedCapacity = 100
+		};
+
+		var tranformBlock = new TransformBlock<CdcDataInput, CdcDataOutput>(async cdcData => 
+		{
+			var pgtable = AppConfiguration.Tables.FirstOrDefault(x => x.QualifiedName.Equals(cdcData.table));
+
 			var topic = string.IsNullOrEmpty(AppConfiguration.Topic) ? pgtable.Topic : AppConfiguration.Topic;
 
-			_logger.LogInformation($"Topic: {topic} table: {pgtable.TableSchame}.{pgtable.TableName}, json: {json}");
+			_logger.LogInformation($"Topic: {topic} table: {pgtable.TableSchame}.{pgtable.TableName}, json: {cdcData.json}");
+			
+			cdcData.key = $"{pgtable.QualifiedName}_{DateTime.Now.Ticks}";
 
-			var item = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+			var item = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(cdcData.json);
 
-			await Producer.ProduceAsync(topic, $"{pgtable.QualifiedName}_{DateTime.Now.Ticks}", pgtable.SerializeKafkaMessage(item), cancellationToken);
-		}
+			var cdcDataOutput = new CdcDataOutput(topic, cdcData.key);
+			try 
+			{
+				cdcDataOutput.payload = pgtable.SerializeKafkaMessage(item);
+			}
+			catch (InvalidOperationException)
+			{
+				using var conn = new NpgsqlConnection(AppConfiguration.ConnectionString);
+
+				await conn.OpenAsync(cancellationToken);
+
+				pgtable.ColumnDescriptors = await conn.ExtractColumnAsync(new { table_schema = pgtable.TableSchame, table_name = pgtable.TableName });
+
+				await _sourceRepository.UpdateAppConfigurationAsync(state.ReferenceId, AppConfiguration.Serialize());
+
+				cdcDataOutput.payload = pgtable.SerializeKafkaMessage(item);
+			}
+
+			return cdcDataOutput;
+		}, executionDataflowBlockOptions);
+
+		var actionBlock = new ActionBlock<CdcDataOutput>(async item => 
+		{
+			await Producer.ProduceAsync(item.topic, item.key , item.payload, cancellationToken);
+		}, executionDataflowBlockOptions);
+
+		tranformBlock.LinkTo(actionBlock, dataflowLinkOptions);
 
 		var builder = PgOutput2JsonBuilder.Create()
 			.WithLoggerFactory(_loggerFactory)
 			.WithPgConnectionString(AppConfiguration.ConnectionString)
 			.WithPgPublications(AppConfiguration.PublicationName)
 			.WithPgReplicationSlot(AppConfiguration.SlotName)
-			.WithMessageHandler(async (json, table, key, partition) =>
-			{
-				var pgtable = AppConfiguration.Tables.FirstOrDefault(x => x.QualifiedName.Equals(table));
-
-				if (pgtable == null)
-				{
-					_logger.LogWarning($"Not found table: {table}");
-				}
-				else 
-				{
-					try
-					{
-						await PublishAsync(pgtable, json);
-					}
-					catch (InvalidOperationException) 
-					{
-						using var conn = new NpgsqlConnection(AppConfiguration.ConnectionString);
-
-						await conn.OpenAsync(cancellationToken);
-
-						pgtable.ColumnDescriptors = await conn.ExtractColumnAsync(new { table_schema = pgtable.TableSchame, table_name = pgtable.TableName });
-
-						await _sourceRepository.UpdateAppConfigurationAsync(state.ReferenceId, AppConfiguration.Serialize());
-
-						await PublishAsync(pgtable, json);
-					}
-					catch (Exception ex)
-					{
-						PgOutput2Json?.Dispose();
-
-						Producer?.Dispose();
-
-						await SetErrorAsync(ex, cancellationToken);
-					}
-				}
-			});
+			.WithMessageHandler((json, table, key, partition) => tranformBlock.Post(new CdcDataInput(json, table, partition) { key = key }));
 
 		PgOutput2Json = builder.Build();
 
 		await PgOutput2Json.Start(cancellationToken);
+
+		tranformBlock.Complete();
+
+		await actionBlock.Completion;
 	}
 
 	protected override Task OnBeforeCompleting(TaskRun state, CancellationToken cancellationToken) 

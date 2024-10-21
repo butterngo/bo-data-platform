@@ -1,4 +1,8 @@
-﻿using System.Text.Json.Serialization;
+﻿using NpgsqlTypes;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text;
+using System.Text.Json.Serialization;
 
 namespace BO.Core.Models;
 
@@ -28,9 +32,34 @@ public abstract class TableSchemaBase
 	public string TableSchame { get; set; }
 	[JsonPropertyName("tableName")]
 	public string TableName { get; set; }
-	
+
+	private string _jsonAvroSchema;
+
+	[JsonIgnore]
+	public string JsonAvroSchema 
+	{
+		get
+		{
+			if (string.IsNullOrEmpty(_jsonAvroSchema))
+			{
+				_jsonAvroSchema = GenerateAvroSchema();
+			}
+			return _jsonAvroSchema;
+		}
+	}
+
+	private IEnumerable<ColumnDescriptor> _columnDescriptors;
+
 	[JsonPropertyName("columnDescriptors")]
-	public IEnumerable<ColumnDescriptor> ColumnDescriptors { get; set; }
+	public IEnumerable<ColumnDescriptor> ColumnDescriptors 
+	{
+		get => _columnDescriptors;
+		set 
+		{
+			_columnDescriptors = value;
+			_jsonAvroSchema = string.Empty;
+		}
+	}
 
 	public TableSchemaBase(string tableSchame, string tableName, IEnumerable<ColumnDescriptor> columnDescriptors)
 	{
@@ -41,5 +70,6 @@ public abstract class TableSchemaBase
 		ColumnDescriptors = columnDescriptors;
 	}
 
+	protected abstract string GenerateAvroSchema();
 	public string GetStrColumnName() => string.Join(", ", ColumnDescriptors.Select(x => x.Field));
 }
