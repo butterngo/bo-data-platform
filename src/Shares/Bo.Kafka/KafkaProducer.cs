@@ -18,7 +18,10 @@ internal class KafkaProducer : IKafkaProducer
 
 	public KafkaProducer(KafkaOptions kafkaOptions, ISchemaRegistryClient schemaRegistryClient)
 	{
-		var avroSerializerConfig = new AvroSerializerConfig();
+		var avroSerializerConfig = new AvroSerializerConfig
+		{
+			AutoRegisterSchemas = true,
+		};
 
 		_producer = new ProducerBuilder<string, GenericRecord>(kafkaOptions.ProducerConfig)
 			.SetValueSerializer(new AvroSerializer<GenericRecord>(schemaRegistryClient, avroSerializerConfig))

@@ -4,10 +4,9 @@ using System.Text;
 using Avro.Generic;
 using BO.Core.Models;
 using System.Text.Json;
-using BO.Core.Extensions;
 using System.Text.Encodings.Web;
-using System.ComponentModel;
 using BO.Core.Converters;
+using System.Text.Json.Serialization;
 
 
 namespace BO.PG.SourceConnector.Models;
@@ -22,6 +21,8 @@ public class PgTableSchema : TableSchemaBase
 	}
 
 	private string _jsonAvroSchema;
+
+	[JsonIgnore]
 	public string JsonAvroSchema 
 	{
 		get 
@@ -142,22 +143,28 @@ public class PgTableSchema : TableSchemaBase
 
 	public GenericRecord SerializeKafkaMessage(Dictionary<string, object> payload) 
 	{
+		const string operation_key = "_ct";
 		var avroSchema = (RecordSchema)RecordSchema.Parse(JsonAvroSchema);
 
 		var record = new GenericRecord(avroSchema);
+
+		record.Add("op", payload[operation_key]);
 		
-		record.Add("op", payload["_ct"]);
-		record.Add("ts_ms", DateTime.Now.Ticks);
+		record.Add("ts_ms", DateTime.UtcNow);
 
 		foreach (var item in payload)
 		{
+			if (item.Key.Equals(operation_key))
+			{
+				continue;
+			}
 			if (avroSchema.TryGetField(item.Key, out var field))
 			{
 				record.Add(item.Key, ChangeType(item.Value, field));
 			}
 			else 
 			{
-				//TODO Schema changed
+				throw new InvalidOperationException($"not found field {item.Key} maybe schema changed, please check it.");
 			}
 		}
 

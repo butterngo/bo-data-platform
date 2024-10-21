@@ -6,6 +6,8 @@ public interface ISourceRepository
 {
 	public Task<int> CreateAsync(Source entity);
 
+	public Task<int> UpdateAppConfigurationAsync(string id , string appConfiguration);
+
 	public Task<int> CreateAsync(List<Source> entities);
 
 	public Task<IEnumerable<Source>> GetAllAsync();

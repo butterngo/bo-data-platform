@@ -46,4 +46,11 @@ internal class SourceRepository : ISourceRepository
 
 		return await conn.QueryFirstOrDefaultAsync<Source>(@$"select * from {SourceSchema.Table} where id = @id", new { id});
 	}
+
+	public async Task<int> UpdateAppConfigurationAsync(string id, string appConfiguration)
+	{
+		using var conn = _dataContext.CreateConnection();
+
+		return await conn.ExecuteAsync(@$"UPDATE {SourceSchema.Table} SET {SourceSchema.Columns.AppConfiguration}=@appConfiguration where id = @id", new { id, appConfiguration });
+	}
 }

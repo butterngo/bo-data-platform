@@ -61,16 +61,17 @@ internal class TaskRunRepository : ITaskRunRepository
 		});
 	}
 
-	public async Task<int> SetRunningAsync(string id, string rowVersion, CancellationToken cancellationToken)
+	public async Task<TaskRun?> SetRunningAsync(string id, string rowVersion, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
 		var sql = @"UPDATE task_runs
 	SET runned_at= NOW(), status=@status, row_version=gen_random_uuid()
-	WHERE id=@id and row_version=@rowVersion";
+	WHERE id=@id and row_version=@rowVersion
+	RETURNING *";
 		using var conn = _dataContext.CreateConnection();
-
-		return await conn.ExecuteAsync(sql, new
+		
+		return await conn.QuerySingleOrDefaultAsync<TaskRun>(sql, new
 		{
 			id,
 			status = TaskRunStatus.Running,
@@ -78,31 +79,33 @@ internal class TaskRunRepository : ITaskRunRepository
 		});
 	}
 
-	public async Task<int> SetCompletedAsync(string id, string rowVersion, CancellationToken cancellationToken)
+	public async Task<TaskRun?> SetCompletedAsync(string id, string rowVersion, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
 		var sql = @"UPDATE task_runs
 	SET completed_at= NOW(), status=@status, row_version=gen_random_uuid()
-	WHERE id=@id and row_version=@rowVersion";
+	WHERE id=@id and row_version=@rowVersion
+RETURNING *";
 		using var conn = _dataContext.CreateConnection();
 
-		return await conn.ExecuteAsync(sql, new { id, status = TaskRunStatus.Completed, rowVersion });
+		return await conn.QuerySingleOrDefaultAsync<TaskRun>(sql, new { id, status = TaskRunStatus.Completed, rowVersion });
 	}
 
-	public async Task<int> SetErrorAsync(string id, string rowVersion, string error_message, CancellationToken cancellationToken)
+	public async Task<TaskRun?> SetErrorAsync(string id, string rowVersion, string error_message, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 
 		var sql = @"UPDATE task_runs
 	SET occurred_at= NOW(), status=@status, error_message=@errorMessage, row_version=gen_random_uuid()
-	WHERE id=@id and row_version=@rowVersion";
+	WHERE id=@id and row_version=@rowVersion
+RETURNING *";
 		using var conn = _dataContext.CreateConnection();
 
-		return await conn.ExecuteAsync(sql, new { id, status = TaskRunStatus.Error, errorMessage = error_message, rowVersion });
+		return await conn.QuerySingleOrDefaultAsync<TaskRun>(sql, new { id, status = TaskRunStatus.Error, errorMessage = error_message, rowVersion });
 	}
 
-	public Task<int> SetStopAsync(string id, string rowVersion, CancellationToken cancellationToken)
+	public Task<TaskRun?> SetStopAsync(string id, string rowVersion, CancellationToken cancellationToken)
 	{
 		throw new NotImplementedException();
 	}

@@ -1,12 +1,13 @@
 ﻿using Bo.Kafka;
 using PgOutput2Json;
-using Avro.Generic;
-using Confluent.Kafka;
 using BO.Core.Entities;
 using BO.Core.Interfaces;
 using BO.Core.Implementations;
 using BO.PG.SourceConnector.Models;
 using Microsoft.Extensions.Logging;
+using Npgsql;
+using BO.Core.Extensions;
+using System.Threading;
 
 namespace BO.PG.SourceConnector.Handlers;
 
@@ -32,28 +33,21 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 	
 	private async Task FirstLoadAsync(TaskRun state, CancellationToken cancellationToken) 
     {
-		var tableSchema = AppConfiguration.Tables.First(x => x.Id == state.Id);
+		var pgtable = AppConfiguration.Tables.First(x => x.Id == state.Id);
 
 		var postgresReader = new PostgresReader(AppConfiguration.ConnectionString);
 
-		var sql = $@"select * from {tableSchema.QualifiedName}";
+		var sql = $@"select * from {pgtable.QualifiedName}";
 
 		await foreach (var item in postgresReader.ReadData(sql, cancellationToken)) 
 		{
-			try
-			{
-				item.Add("_ct", "I");
+			item.Add("_ct", "I");
 
-				await Producer.ProduceAsync(tableSchema.Topic, $"{tableSchema.QualifiedName}_{DateTime.Now.Ticks}", tableSchema.SerializeKafkaMessage(item), cancellationToken);
-			}
-			catch (ProduceException<string, GenericRecord> ex)
-			{
-				_logger.LogError($"Message: {ex.Message} StackTrace: {ex.StackTrace}");
-			}
+			await Producer.ProduceAsync(pgtable.Topic, $"{pgtable.QualifiedName}_{DateTime.Now.Ticks}", pgtable.SerializeKafkaMessage(item), cancellationToken);
 		}
 	}
 
-	private async Task ProduceAsync(TaskRun state, CancellationToken cancellationToken) 
+	private async Task ConsumeAsync(TaskRun state, CancellationToken cancellationToken) 
 	{
 		var tables = string.Join(", ", AppConfiguration.Tables.Select(x => $"{x.TableSchame}.{x.TableName}"));
 
@@ -61,6 +55,17 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 			.HandleAsync(AppConfiguration.ConnectionString,
 			AppConfiguration.PublicationName,
 			AppConfiguration.SlotName, tables, cancellationToken);
+
+		async Task PublishAsync(PgTableSchema pgtable, string json)
+		{
+			var topic = string.IsNullOrEmpty(AppConfiguration.Topic) ? pgtable.Topic : AppConfiguration.Topic;
+
+			_logger.LogInformation($"Topic: {topic} table: {pgtable.TableSchame}.{pgtable.TableName}, json: {json}");
+
+			var item = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+
+			await Producer.ProduceAsync(topic, $"{pgtable.QualifiedName}_{DateTime.Now.Ticks}", pgtable.SerializeKafkaMessage(item), cancellationToken);
+		}
 
 		var builder = PgOutput2JsonBuilder.Create()
 			.WithLoggerFactory(_loggerFactory)
@@ -77,19 +82,29 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 				}
 				else 
 				{
-					var topic = string.IsNullOrEmpty(AppConfiguration.Topic) ? pgtable.Topic : AppConfiguration.Topic;
-
-					_logger.LogInformation($"Topic: {topic} table: {table}, json: {json}");
-
-					try 
+					try
 					{
-						var item = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
-
-						await Producer.ProduceAsync(topic, $"{pgtable.QualifiedName}_{DateTime.Now.Ticks}", pgtable.SerializeKafkaMessage(item), cancellationToken);
+						await PublishAsync(pgtable, json);
 					}
-					catch (ProduceException<string, GenericRecord> ex)
+					catch (InvalidOperationException) 
 					{
-						_logger.LogError($"Message: {ex.Message} StackTrace: {ex.StackTrace}");
+						using var conn = new NpgsqlConnection(AppConfiguration.ConnectionString);
+
+						await conn.OpenAsync(cancellationToken);
+
+						pgtable.ColumnDescriptors = await conn.ExtractColumnAsync(new { table_schema = pgtable.TableSchame, table_name = pgtable.TableName });
+
+						await _sourceRepository.UpdateAppConfigurationAsync(state.ReferenceId, AppConfiguration.Serialize());
+
+						await PublishAsync(pgtable, json);
+					}
+					catch (Exception ex)
+					{
+						PgOutput2Json?.Dispose();
+
+						Producer?.Dispose();
+
+						await SetErrorAsync(ex, cancellationToken);
 					}
 				}
 			});
@@ -117,7 +132,7 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 		{
 			_logger.LogInformation($"Staring Consume data from Publication: {AppConfiguration.PublicationName} and Slot: {AppConfiguration.SlotName}");
 
-			await ProduceAsync(state, cancellationToken);
+			await ConsumeAsync(state, cancellationToken);
 		}
 		else
 		{

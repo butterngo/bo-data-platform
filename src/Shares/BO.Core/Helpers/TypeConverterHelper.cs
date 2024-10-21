@@ -68,6 +68,7 @@ public static class TypeConverterHelper
 			NpgsqlDbType.Uuid => "string", // Avro does not have a UUID type, so string is used
 			NpgsqlDbType.Bytea => "bytes",
 			NpgsqlDbType.Date => "int",
+			NpgsqlDbType.Time => "long",
 			NpgsqlDbType.Timestamp => "long", // Avro uses long for timestamps (milliseconds since epoch)
 			NpgsqlDbType.TimestampTz => "long", // Same as above
 			_ => "string"

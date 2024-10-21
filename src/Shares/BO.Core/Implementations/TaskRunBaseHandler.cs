@@ -1,16 +1,27 @@
 ﻿using System.Text.Json;
+using System.Threading;
 using BO.Core.Entities;
 using BO.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace BO.Core.Implementations;
 
+public record class ExceptionDetails(string Message, string StackTrace, string InnerException)
+{
+	public static ExceptionDetails Create(Exception ex) => new ExceptionDetails(ex.Message, ex.StackTrace?.ToString(), ex.InnerException?.ToString());
+	public override string ToString()
+	{
+		return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+	}
+}
 public abstract class TaskRunBaseHandler<T> : ITaskRunHandler
 {
 	protected readonly ILoggerFactory _loggerFactory;
 	private readonly ITaskRunRepository _taskRunRepository;
 	protected readonly ILogger<T> _logger;
-	private TaskRun State { get; set; }
+	private ExceptionDetails? ExceptionDetails { get; set; }
+
+	private TaskRun? State { get; set; }
 
 	public TaskRunBaseHandler(ITaskRunRepository taskRunRepository, ILoggerFactory loggerFactory)
 	{
@@ -19,31 +30,36 @@ public abstract class TaskRunBaseHandler<T> : ITaskRunHandler
 		_taskRunRepository = taskRunRepository;
 	}
 
-	public async Task HandleAsync(TaskRun state, CancellationToken cancellationToken)
+	protected async Task SetErrorAsync(Exception ex, CancellationToken cancellationToken) 
+	{
+		var exceptionDetails = ExceptionDetails.Create(ex);
+		await _taskRunRepository.SetErrorAsync(State.Id, State.RowVersion, exceptionDetails.ToString(), cancellationToken);
+	}
+
+    public async Task HandleAsync(TaskRun taskRun, CancellationToken cancellationToken)
 	{
 		try
 		{
-			State = state;
+			_logger.LogInformation($"Starting TaskRun {taskRun.Id}");
 
-			_logger.LogInformation($"Starting TaskRun {state.Id}");
+			State = await _taskRunRepository.SetRunningAsync(taskRun.Id, taskRun.RowVersion, cancellationToken);
 
-			await _taskRunRepository.SetRunningAsync(state.Id, state.RowVersion, cancellationToken);
+			if (State == null) 
+			{
+				throw new InvalidOperationException($"TaskRun is running to another process Id: {taskRun.Id} RowVersion: {taskRun.RowVersion}");
+			}
 
-			_logger.LogInformation($"Task {state.Id} is running.");
+			_logger.LogInformation($"TaskRun {State.Id} is running.");
 
-			await DoWork(state, cancellationToken);
+			await DoWork(State, cancellationToken);
 
-			await OnBeforeCompleting(state, cancellationToken);
+			await OnBeforeCompleting(State, cancellationToken);
 
-			await _taskRunRepository.SetCompletedAsync(state.Id, state.RowVersion, cancellationToken);
+			await _taskRunRepository.SetCompletedAsync(State.Id, State.RowVersion, cancellationToken);
 		}
 		catch (Exception ex)
 		{
-			await _taskRunRepository.SetErrorAsync(state.Id, state.RowVersion, JsonSerializer.Serialize(new
-			{
-				message = $"{ex.Message}",
-				stackTrace = $"{ex.StackTrace}",
-			}), cancellationToken);
+			await SetErrorAsync(ex, cancellationToken);
 			throw;
 		}
 	}
