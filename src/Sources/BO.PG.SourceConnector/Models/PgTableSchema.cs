@@ -3,13 +3,11 @@ using NpgsqlTypes;
 using System.Text;
 using Avro.Generic;
 using BO.Core.Models;
-using Bo.Kafka.Models;
 using System.Text.Json;
 using BO.Core.Extensions;
-using System.Text.Json.Nodes;
 using System.Text.Encodings.Web;
-using System.Security.AccessControl;
-using Microsoft.Extensions.Primitives;
+using System.ComponentModel;
+using BO.Core.Converters;
 
 
 namespace BO.PG.SourceConnector.Models;
@@ -41,7 +39,7 @@ public class PgTableSchema : TableSchemaBase
 				writer.WriteStartObject();
 				writer.WriteString("type", "record");
 				writer.WriteString("name", QualifiedName);
-				//writer.WriteString("namespace", "BO.PG.SourceConnector.Convertor");
+				writer.WriteString("namespace", "BO.PG.SourceConnector.Convertor");
 				writer.WritePropertyName("fields");
 				writer.WriteStartArray();
 				WriteObject(writer, new ColumnDescriptor { Field = "op", Type = "string" });
@@ -60,25 +58,66 @@ public class PgTableSchema : TableSchemaBase
 		}
 	}
 
+	private static string GetLogicalType(NpgsqlDbType npgsqlDbType)
+	{
+		switch (npgsqlDbType)
+		{
+			case NpgsqlDbType.Timestamp:
+			case NpgsqlDbType.TimestampTz:
+				{
+					return "timestamp-millis";
+				}
+			case NpgsqlDbType.Time:
+				{
+					return "time-millis";
+				}
+			case NpgsqlDbType.Date:
+				{
+					return "date";
+				}
+			default:
+				{
+					return string.Empty;
+				}
+		}
+	}
 	private void WriteObject(Utf8JsonWriter writer, ColumnDescriptor column) 
 	{
 		writer.WriteStartObject();
 		writer.WriteString("name", column.Field);
 
 		var npgsqlDbType = ParseEnum(column.Type);
+		
+		var logicalType = GetLogicalType(npgsqlDbType);
 
-		var type = npgsqlDbType.MapNpgsqlDbTypeToAvroType();
+		var type = TypeConverterHelper.ConvertNpgsqlDbTypeToAvroType(npgsqlDbType);
+
+		writer.WritePropertyName("type");
+
+		void WriteType(Utf8JsonWriter writer, string type, string logicalType) 
+		{
+			if (string.IsNullOrEmpty(logicalType))
+			{
+				writer.WriteStringValue(type);
+			}
+			else 
+			{
+				writer.WriteStartObject();
+				writer.WriteString("type", type);
+				writer.WriteString("logicalType", logicalType);
+				writer.WriteEndObject();
+			}
+		}
 
 		if (!column.IsNullable)
 		{
-			writer.WriteString("type", type);
+			WriteType(writer, type, logicalType);
 		}
 		else
 		{
-			writer.WritePropertyName("type");
 			writer.WriteStartArray();
 			writer.WriteStringValue("null");
-			writer.WriteStringValue(type);
+			WriteType(writer, type, logicalType);
 			writer.WriteEndArray();
 			writer.WritePropertyName("default");
 			writer.WriteNullValue();
@@ -86,26 +125,6 @@ public class PgTableSchema : TableSchemaBase
 
 		writer.WriteBoolean("is_primary", column.IsPrimary);
 
-		switch (npgsqlDbType)
-		{
-			case NpgsqlDbType.Timestamp:
-			case NpgsqlDbType.TimestampTz:
-				{
-					writer.WriteString("logicalType", "timestamp-millis");
-					break;
-				}
-			case NpgsqlDbType.Time:
-				{
-					writer.WriteString("logicalType", "time-millis");
-					break;
-				}
-			case NpgsqlDbType.Date:
-				{
-					writer.WriteString("logicalType", "date");
-					break;
-				}
-				
-		}
 		writer.WriteEndObject();
 	}
 
@@ -153,11 +172,11 @@ public class PgTableSchema : TableSchemaBase
 
 		if (isUnionSchema)
 		{
-			type = (field.Schema as UnionSchema).Schemas.Last().Name.MapAvroTypeToCSharpType();
+			type = TypeConverterHelper.ConvertAvroTypeToCSharpType((field.Schema as UnionSchema).Schemas.Last().Name);
 		}
 		else 
 		{
-			type = field.Schema.Name.MapAvroTypeToCSharpType();
+			type = TypeConverterHelper.ConvertAvroTypeToCSharpType(field.Schema.Name);
 		}
 
 		try
@@ -168,60 +187,5 @@ public class PgTableSchema : TableSchemaBase
 		{
 			return null;
 		}
-	}
-
-	public KafkaMessageGenerator SerializeKafkaMessage(string json)
-	{
-		var jObj = JsonObject.Parse(json);
-		var kafkaMessage = new KafkaMessageGenerator
-		{
-			op = jObj["_ct"].GetValue<string>(),
-			ts_ms = Convert.ToInt64(jObj["_mts"].GetValue<string>()),
-			source = new Dictionary<string, object>
-			{
-				{ "table", jObj["_tbl"].GetValue<string>() }
-			}
-		};
-
-		foreach (var column in ColumnDescriptors)
-		{
-			switch (ParseEnum(column.Type))
-			{
-				case NpgsqlDbType.Bigint:
-					{
-						kafkaMessage.SetValue(column.Field, "long", jObj[column.Field].GetValue<long>(), column.IsPrimary, column.IsNullable);
-						break;
-					}
-				case NpgsqlDbType.Double:
-				case NpgsqlDbType.Numeric:
-				case NpgsqlDbType.Money:
-					{
-						kafkaMessage.SetValue(column.Field, "double", jObj[column.Field].GetValue<double>(), column.IsPrimary, column.IsNullable);
-						break;
-					}
-				case NpgsqlDbType.Real:
-					{
-						kafkaMessage.SetValue(column.Field, "float", jObj[column.Field].GetValue<float>(), column.IsPrimary, column.IsNullable);
-						break;
-					}
-				case NpgsqlDbType.Smallint:
-					{
-						kafkaMessage.SetValue(column.Field, "int", jObj[column.Field].GetValue<int>(), column.IsPrimary, column.IsNullable);
-						break;
-					}
-				case NpgsqlDbType.Bytea:
-					{
-						kafkaMessage.SetValue(column.Field, "string", jObj[column.Field].GetValue<string>(), column.IsPrimary, column.IsNullable);
-						break;
-					}
-				default:
-					{
-						kafkaMessage.SetValue(column.Field, "string", jObj[column.Field].GetValue<string>(), column.IsPrimary, column.IsNullable);
-						break;
-					}
-			}
-		}
-
-		return kafkaMessage;
 	}
 }

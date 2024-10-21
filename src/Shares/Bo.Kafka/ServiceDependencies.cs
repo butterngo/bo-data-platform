@@ -1,5 +1,4 @@
-﻿using Bo.Kafka.Models;
-using Confluent.SchemaRegistry;
+﻿using Confluent.SchemaRegistry;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bo.Kafka;
@@ -16,8 +15,10 @@ public static class ServiceDependencies
 
 		services.AddSingleton<ISchemaRegistryClient>(p => new CachedSchemaRegistryClient(kafkaOptions.SchemaRegistryConfig));
 
-		services.AddTransient<IKafkaProducer, AvroKafkaProducer>();
+		services.AddTransient<IKafkaProducer, KafkaProducer>();
 
+		services.AddTransient<IKafkaConsumer, KafkaConsumer>();
+		
 		return services;
 	}
 }

@@ -1,72 +1,93 @@
-﻿using Bo.Kafka.Models;
+﻿using Avro.Generic;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Confluent.Kafka.SyncOverAsync;
 using Confluent.SchemaRegistry.Serdes;
+using Confluent.Kafka.Admin;
 
 namespace Bo.Kafka;
 
-public class KafkaConsumer : IDisposable
+public interface IKafkaConsumer : IDisposable
 {
-	private readonly IConsumer<Ignore, KafkaMessageGenerator> _consumer;
-	private readonly CachedSchemaRegistryClient _schemaRegistry;
+	Action<IConsumer<string, GenericRecord>, LogMessage> OnLogHandler { get; set; }
+	Action<IConsumer<string, GenericRecord>, Error> OnErrorHandler { get; set; }
+	IKafkaConsumer Create(Action<ConsumerConfig> action);
+	Task Subscribe(string regexTopic, Func<ConsumeResult<string, GenericRecord>, Task> func, CancellationToken cancellationToken);
+	Task Subscribe(IEnumerable<string> topics, Func<ConsumeResult<string, GenericRecord>, Task> func, CancellationToken cancellationToken);
+}
 
-	public KafkaConsumer(ConsumerConfig config) 
+internal class KafkaConsumer : IKafkaConsumer
+{
+	private IConsumer<string, GenericRecord> Consumer { get; set; }
+
+	private readonly KafkaOptions _kafkaOptions;
+
+	private readonly ISchemaRegistryClient _schemaRegistryClient;
+
+	public KafkaConsumer(KafkaOptions kafkaOptions, ISchemaRegistryClient schemaRegistryClient) 
 	{
-		var schemaRegistryConfig = new SchemaRegistryConfig
-		{
-			Url = "http://localhost:8081"
-		};
+		_kafkaOptions = kafkaOptions;
+		_schemaRegistryClient = schemaRegistryClient;
+	}
 
-		_schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig);
+	public Action<IConsumer<string, GenericRecord>, LogMessage> OnLogHandler { get; set; }
+
+	public Action<IConsumer<string, GenericRecord>, Error> OnErrorHandler { get; set; }
+
+	private async Task Consume(Func<ConsumeResult<string, GenericRecord>, Task> func, CancellationToken cancellationToken)
+	{
+		try 
+		{
+			while (!cancellationToken.IsCancellationRequested)
+			{
+				var consumeResult = Consumer.Consume(cancellationToken);
+
+				if (consumeResult != null)
+				{
+					await func(consumeResult);
+				}
+
+				Consumer.Commit(consumeResult);
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			this.Dispose();
+		}
+	}
+
+	public void Dispose() => Consumer?.Close();
+
+	public IKafkaConsumer Create(Action<ConsumerConfig> action)
+	{
+		var consumerConfig = _kafkaOptions.ConsumerConfig;
+
+		consumerConfig.EnableAutoCommit = false;
+
+		action(consumerConfig);
+
 		var avroDeserializerConfig = new AvroDeserializerConfig();
 
-		config.EnableAutoCommit = false;
-		var consumerBuilder = new ConsumerBuilder<Ignore, KafkaMessageGenerator>(config);
+		var consumerBuilder = new ConsumerBuilder<string, GenericRecord>(consumerConfig);
 		//consumerBuilder.SetValueDeserializer(KafkaMessageSerializer<KafkaMessage>.Create());
-		consumerBuilder.SetValueDeserializer(new AvroDeserializer<KafkaMessageGenerator>(_schemaRegistry, avroDeserializerConfig).AsSyncOverAsync());
-		consumerBuilder.SetLogHandler((_, logHandler) => { });
-		consumerBuilder.SetErrorHandler((_, errorHandler) => { });
-		_consumer = consumerBuilder.Build();
+		consumerBuilder.SetValueDeserializer(new AvroDeserializer<GenericRecord>(_schemaRegistryClient, avroDeserializerConfig).AsSyncOverAsync());
+		consumerBuilder.SetLogHandler(OnLogHandler);
+		consumerBuilder.SetErrorHandler(OnErrorHandler);
+		Consumer = consumerBuilder.Build();
+
+		return this;
 	}
 
-	public async Task Consume(string regexTopic, Func<KafkaMessageGenerator, Task> func, CancellationToken cancellationToken)
+	public Task Subscribe(string regexTopic, Func<ConsumeResult<string, GenericRecord>, Task> func, CancellationToken cancellationToken)
 	{
-		while (!cancellationToken.IsCancellationRequested)
-		{
-			_consumer.Subscribe(regexTopic);
+		Consumer.Subscribe(regexTopic);
 
-			var consumeResult = _consumer.Consume(cancellationToken);
-
-			if (consumeResult != null) 
-			{
-				await func(consumeResult.Message.Value);
-			}
-
-			_consumer.Commit(consumeResult);
-		}
+		return Consume(func, cancellationToken);
 	}
 
-	public async Task Consume(IEnumerable<string> topics, Func<KafkaMessageGenerator, Task> func, CancellationToken cancellationToken) 
+	public Task Subscribe(IEnumerable<string> topics, Func<ConsumeResult<string, GenericRecord>, Task> func, CancellationToken cancellationToken)
 	{
-		while (!cancellationToken.IsCancellationRequested)
-		{
-			_consumer.Subscribe(topics);
-			
-			var consumeResult = _consumer.Consume(cancellationToken);
-
-			if (consumeResult != null)
-			{
-				await func(consumeResult.Message.Value);
-			}
-
-			_consumer.Commit(consumeResult);
-		}
-	}
-
-	public void Dispose()
-	{
-		_consumer.Close();
-		_schemaRegistry.Dispose();
+		Consumer.Subscribe(topics);
+		return Consume(func, cancellationToken);
 	}
 }

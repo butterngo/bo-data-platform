@@ -1,44 +1,41 @@
-﻿using Bo.Kafka.Models;
+﻿using Avro.Generic;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 
 namespace Bo.Kafka;
 
-public class KafkaProducer : IDisposable
+public interface IKafkaProducer : IDisposable
 {
-	private readonly IProducer<Null, KafkaMessageGenerator> _producer;
-	private readonly CachedSchemaRegistryClient _schemaRegistry;
+	Task ProduceAsync(string topic, string key, GenericRecord message, CancellationToken cancellationToken = default(CancellationToken));
+}
 
-	public KafkaProducer(ProducerConfig config)
+internal class KafkaProducer : IKafkaProducer
+{
+	private readonly IProducer<string, GenericRecord> _producer;
+
+	public Func<ProduceException<string, GenericRecord>, Task> OnError { get; set; }
+
+	public KafkaProducer(KafkaOptions kafkaOptions, ISchemaRegistryClient schemaRegistryClient)
 	{
-		var schemaRegistryConfig = new SchemaRegistryConfig
-		{
-			Url = "http://localhost:8081"
-		};
+		var avroSerializerConfig = new AvroSerializerConfig();
 
-		_schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig);
-
-		var avroSerializerConfig = new AvroSerializerConfig
-		{
-			AutoRegisterSchemas = true
-		};
-
-		_producer = new ProducerBuilder<Null, KafkaMessageGenerator>(config)
-			//.SetValueSerializer(KafkaMessageSerializer<KafkaMessage>.Create())
-			.SetValueSerializer(new AvroSerializer<KafkaMessageGenerator>(_schemaRegistry, avroSerializerConfig))
+		_producer = new ProducerBuilder<string, GenericRecord>(kafkaOptions.ProducerConfig)
+			.SetValueSerializer(new AvroSerializer<GenericRecord>(schemaRegistryClient, avroSerializerConfig))
 			.Build();
 	}
 
-	public async Task<DeliveryResult<Null, KafkaMessageGenerator>> ProduceAsync(string topic, KafkaMessageGenerator message, CancellationToken cancellationToken = default(CancellationToken))
+	public async Task ProduceAsync(string topic, string key, GenericRecord message, CancellationToken cancellationToken = default(CancellationToken))
 	{
-		return await _producer.ProduceAsync(topic, new Message<Null, KafkaMessageGenerator> { Value = message }, cancellationToken);
+		await _producer.ProduceAsync(topic, new Message<string, GenericRecord>
+		{
+			Key = key,
+			Value = message
+		}, cancellationToken);
 	}
 
 	public void Dispose()
 	{
 		_producer.Dispose();
-		_schemaRegistry.Dispose();
 	}
 }
-

@@ -24,7 +24,7 @@ builder.Services.AddKafka(options =>
 
 builder.Services.AddPostgresqlSrcConnector();
 
-//builder.Services.AddPostgresqlDestConnector();
+builder.Services.AddPostgresqlDestConnector();
 
 //builder.Services.AddBigQueryDestConnector();
 

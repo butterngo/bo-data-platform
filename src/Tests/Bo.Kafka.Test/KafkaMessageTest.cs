@@ -12,34 +12,18 @@ namespace Bo.Kafka.Test
 		public void Test()
 		{
             var json = @"{
-    ""type"": ""record"",
-    ""name"": ""categories"",
-    ""namespace"": ""northwind"",
-    ""fields"": [
-        {
-            ""name"": ""category_id"",
-            ""type"": ""int""
-        },
-        {
-            ""name"": ""category_name"",
-            ""type"": ""string""
-        },
-         { ""name"": ""description"", ""type"": ""int"" },
-        {
-            ""name"": ""picture"",
-            ""type"": ""null""
-        }
-    ]
+  ""type"": ""record"",
+  ""name"": ""User"",
+  ""fields"": [
+    {""name"": ""birth_date"", ""type"": {""type"": ""int"", ""logicalType"": ""date""}}
+  ]
 }";
+			((Avro.LogicalSchema)field).LogicalTypeName
 			var avroSchema = (RecordSchema)RecordSchema.Parse(json);
 
+			var field = avroSchema.Fields.First().Schema;
 			var record = new GenericRecord(avroSchema);
-			record.Add("category_id", 1);
-			record.Add("category_name", "test");
-			record.Add("description", "blue");
-			record.Add("picture", 1);
-			
-			var aa = "";
+	
 		}
 
 	}

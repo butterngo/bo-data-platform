@@ -26,9 +26,11 @@ builder.Services.AddScoped<ITaskRunFactory, TaskRunFactory>();
 
 builder.Services.AddPostgresqlSrcConnector();
 
+builder.Services.AddPostgresqlDestConnector();
+
 //builder.Services.AddBigQueryDestConnector();
 
-//builder.Services.AddPostgresqlDestConnector();
+
 
 builder.Services.AddHostedService<WorkerService>();
 

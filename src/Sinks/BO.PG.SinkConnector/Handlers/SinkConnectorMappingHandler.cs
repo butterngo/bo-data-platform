@@ -6,8 +6,6 @@ namespace BO.PG.SinkConnector.Handlers;
 
 internal class SinkConnectorMappingHandler : DestinationConnectorMappingBaseHandler<CreatePGDestConnector>
 {
-	
-
 	protected override Task<Destination> GetDestinationAsync(CreatePGDestConnector input, CancellationToken cancellationToken)
 	{
 		var destination = new Destination

@@ -1,10 +1,15 @@
 ﻿using Bo.Kafka;
-using Confluent.Kafka;
+using Avro.Generic;
 using BO.Core.Entities;
-using Bo.Kafka.Models;
 using BO.Core.Interfaces;
 using BO.Core.Implementations;
 using Microsoft.Extensions.Logging;
+using Confluent.Kafka;
+using Newtonsoft.Json.Linq;
+using BO.Core.Converters;
+using NpgsqlTypes;
+using Avro;
+using Avro.Util;
 
 namespace BO.PG.SinkConnector.Handlers;
 
@@ -15,14 +20,16 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 
 	private PgAppConfiguration AppConfiguration { get; set; }
 
-	private KafkaConsumer Consumer { get; set; }
+	private IKafkaConsumer Consumer { get; set; }
 
 	public TaskRunPostgresqlHandler(IDestinationRepository destinationRepository,
 		ITaskRunRepository taskRunRepository,
 		ILoggerFactory loggerFactory,
+		IKafkaConsumer consumer,
 		TableRepository tableRepository)
 		:base(taskRunRepository, loggerFactory)
 	{
+		Consumer = consumer;
 		_tableRepository = tableRepository;
 		_destinationRepository = destinationRepository;
 	}
@@ -32,29 +39,29 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 		Consumer?.Dispose();
 	}
 
-	private async Task ExecuteAsync(KafkaMessageGenerator kafkaMessage, CancellationToken cancellationToken)
+	private async Task ExecuteAsync(GenericRecord kafkaMessage, CancellationToken cancellationToken)
 	{
-		cancellationToken.ThrowIfCancellationRequested();
+		//cancellationToken.ThrowIfCancellationRequested();
 
-		var tableName = _tableRepository.ConvertTableName(kafkaMessage, AppConfiguration.Schema);
+		//var tableName = _tableRepository.ConvertTableName(kafkaMessage, AppConfiguration.Schema);
 
-		switch (kafkaMessage.op.ToUpper()) 
-		{
-			case "I": 
-				{
-					await _tableRepository.InsertAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
-					break;
-				}
-			case "U":
-				{
-					await _tableRepository.UpdateAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
-					break;
-				}
-			case "D":
-				{
-					throw new NotImplementedException();
-				}
-		}
+		//switch (kafkaMessage.op.ToUpper()) 
+		//{
+		//	case "I": 
+		//		{
+		//			await _tableRepository.InsertAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
+		//			break;
+		//		}
+		//	case "U":
+		//		{
+		//			await _tableRepository.UpdateAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
+		//			break;
+		//		}
+		//	case "D":
+		//		{
+		//			throw new NotImplementedException();
+		//		}
+		//}
 	}
 
 	protected override Task OnBeforeCompleting(TaskRun state, CancellationToken cancellationToken)
@@ -71,27 +78,18 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 
 		AppConfiguration = PgAppConfiguration.Deserialize<PgAppConfiguration>(destination.AppConfiguration);
 
-		var kafkaServer = AppConfiguration.Consumer["kafkaServer"].ToString();
+		//await _tableRepository.CreateSchemaIfNotExited(AppConfiguration.ConnectionString, AppConfiguration.Schema, cancellationToken);
 
-		var groupId = AppConfiguration.Consumer["groupId"].ToString();
-
-		_logger.LogDebug($"kafka server {kafkaServer} groupId: {groupId}");
-
-		await _tableRepository.CreateSchemaIfNotExited(AppConfiguration.ConnectionString, AppConfiguration.Schema, cancellationToken);
-
-		Consumer = new KafkaConsumer(new ConsumerConfig
+		Consumer.Create(options => 
 		{
-			BootstrapServers = kafkaServer,
-			GroupId = groupId,
-			PartitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
-			AutoOffsetReset = AutoOffsetReset.Earliest,
+			options.GroupId = AppConfiguration.Consumer["groupId"].ToString();
 		});
 
 		if (AppConfiguration.Topics != null)
 		{
-			await Consumer.Consume(AppConfiguration.Topics, async message =>
+			await Consumer.Subscribe(AppConfiguration.Topics, async consumeResult =>
 			{
-				_logger.LogDebug("message: {@message}", message);
+				Console.WriteLine($"Key: {consumeResult.Message.Key}\nValue: {consumeResult.Message.Value}");
 
 				//await ExecuteAsync(message, cancellationToken);
 
@@ -101,13 +99,85 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 
 		if (!string.IsNullOrEmpty(AppConfiguration.TopicPattern))
 		{
-			await Consumer.Consume(AppConfiguration.TopicPattern, async message =>
+			await Consumer.Subscribe(AppConfiguration.TopicPattern, async consumeResult =>
 			{
-				_logger.LogDebug("message: {@message}", message);
+				try
+				{
+					var fields = consumeResult.Message.Value.Schema.Fields;
+					Console.WriteLine($"table {GenerateTable(consumeResult.Message.Value.Schema)}");
+					foreach (var field in fields)
+					{
+						Console.WriteLine($"{field.Name}: {consumeResult.Message.Value[field.Name]}");
+					}
+				}
+				catch (Exception ex) 
+				{
+				}
+				
 
 				//await ExecuteAsync(message, cancellationToken);
 
 			}, cancellationToken);
 		}
+	}
+
+	private static string GetLogicalType(Schema schema) 
+	{
+		string logicalType = null;
+		if (schema is LogicalSchema logicalSchema)
+		{
+			logicalType = logicalSchema.LogicalTypeName;
+		}
+		else if (schema is UnionSchema unionSchema)
+		{
+			foreach (var subSchema in unionSchema.Schemas)
+			{
+				if (subSchema is LogicalSchema logicalSubSchema)
+				{
+					logicalType = logicalSubSchema.LogicalTypeName;
+					break;
+				}
+			}
+		}
+
+		return logicalType;
+	}
+
+	private static string GetAvroType(Schema schema) 
+	{
+		bool isUnionSchema = schema is UnionSchema;
+
+		string type = schema.Name;
+
+		if (isUnionSchema)
+		{
+			type = (schema as UnionSchema).Schemas.Last().Name;
+		}
+	
+		return type;
+	}
+
+	private static string GenerateTable(RecordSchema avroSchema)
+	{
+		string tableName = avroSchema.Name;
+		
+		List<string> columns = new List<string>();
+
+		foreach (var field in avroSchema.Fields)
+		{
+			string fieldName = field.Name;
+			string avroType = GetAvroType(field.Schema);
+			string logicalType = GetLogicalType(field.Schema);
+
+			NpgsqlDbType postgresType = TypeConverterHelper.ConvertAvroTypeToNpgsqlDbType(avroType, logicalType);
+
+			columns.Add($"{fieldName} {postgresType.ToString()}");
+		}
+
+		string createTableSQL = $"CREATE TABLE {tableName} (\n  {string.Join(",\n  ", columns)}\n);";
+
+		Console.WriteLine(createTableSQL);
+
+		return tableName;
 	}
 }
