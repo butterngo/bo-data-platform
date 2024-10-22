@@ -1,9 +1,35 @@
-﻿using NpgsqlTypes;
+﻿using Avro;
+using NpgsqlTypes;
 
 namespace BO.Core.Converters;
 
 public static class TypeConverterHelper
 {
+	public static object ChangeType(object value, Field field)
+	{
+		bool isUnionSchema = field.Schema is UnionSchema;
+
+		Type type = null;
+
+		if (isUnionSchema)
+		{
+			type = ConvertAvroTypeToCSharpType((field.Schema as UnionSchema).Schemas.Last().Name);
+		}
+		else
+		{
+			type = ConvertAvroTypeToCSharpType(field.Schema.Name);
+		}
+
+		try
+		{
+			return Convert.ChangeType(value, type);
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
 	public static NpgsqlDbType ConvertAvroTypeToNpgsqlDbType(string avroType, string logicalType = null)
 	{
 		return avroType switch

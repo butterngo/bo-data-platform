@@ -1,5 +1,6 @@
 ﻿using Npgsql;
 using Bo.Kafka;
+using Avro.Generic;
 using PgOutput2Json;
 using BO.Core.Entities;
 using BO.Core.Extensions;
@@ -7,9 +8,7 @@ using BO.Core.Interfaces;
 using BO.Core.Implementations;
 using BO.PG.SourceConnector.Models;
 using Microsoft.Extensions.Logging;
-using Confluent.Kafka;
 using System.Threading.Tasks.Dataflow;
-using Avro.Generic;
 
 namespace BO.PG.SourceConnector.Handlers;
 
@@ -51,9 +50,19 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 
 		var sql = $@"select * from {pgtable.QualifiedName}";
 
+		var createSqlScript = PgTableExtensions.GenerateCreateTableScript(pgtable);
+
+		var offset = 0;
+
 		await foreach (var item in postgresReader.ReadData(sql, cancellationToken)) 
 		{
 			item.Add("_ct", "I");
+
+			if (offset == 0)
+			{
+				item.Add("table_changed", createSqlScript);
+				offset++;
+			}
 
 			await Producer.ProduceAsync(pgtable.Topic, $"{pgtable.QualifiedName}_{DateTime.Now.Ticks}", pgtable.SerializeKafkaMessage(item), cancellationToken);
 		}
@@ -98,9 +107,13 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 
 				await conn.OpenAsync(cancellationToken);
 
-				pgtable.ColumnDescriptors = await conn.ExtractColumnAsync(new { table_schema = pgtable.TableSchame, table_name = pgtable.TableName });
+				var newColumnDescriptors = await conn.ExtractColumnAsync(new { table_schema = pgtable.TableSchame, table_name = pgtable.TableName });
 
 				await _sourceRepository.UpdateAppConfigurationAsync(state.ReferenceId, AppConfiguration.Serialize());
+
+				item.Add("table_changed", PgTableExtensions.GenerateAlterTableScript(pgtable.TableName, pgtable.ColumnDescriptors, newColumnDescriptors));
+
+				pgtable.ColumnDescriptors = newColumnDescriptors;
 
 				cdcDataOutput.payload = pgtable.SerializeKafkaMessage(item);
 			}

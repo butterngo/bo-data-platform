@@ -21,21 +21,6 @@ public class TableRepository
 	//	return $"{tableSchema}.{arr[1]}";
 	//}
 
-	//public string GenerateCreateTableScript(string tableName, IEnumerable<KafkaMessageField> fields)
-	//{
-	//	var columns = new List<string>();
-
-	//	foreach (var field in fields)
-	//	{
-	//		string columnType = GetSqlType(field.type);
-	//		columns.Add($"{field.field} {columnType}");
-	//	}
-
-	//	string columnsDefinition = string.Join(",\n    ", columns);
-
-	//	return $"CREATE TABLE IF NOT EXISTS {tableName} (\n {columnsDefinition}\n);";
-	//}
-
 	//private (string columns, string values) GenerateColumnsAndValues(Dictionary<string, object> data) 
 	//{
 	//	var columns = new List<string>();

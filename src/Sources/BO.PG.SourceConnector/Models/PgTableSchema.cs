@@ -1,13 +1,9 @@
 ﻿using Avro;
 using NpgsqlTypes;
-using System.Text;
 using Avro.Generic;
 using BO.Core.Models;
-using System.Text.Json;
-using System.Text.Encodings.Web;
 using BO.Core.Converters;
-using System.Text.Json.Serialization;
-
+using BO.Core.Extensions;
 
 namespace BO.PG.SourceConnector.Models;
 
@@ -20,89 +16,6 @@ public class PgTableSchema : TableSchemaBase
 	{
 	}
 
-	private static string GetLogicalType(NpgsqlDbType npgsqlDbType)
-	{
-		switch (npgsqlDbType)
-		{
-			case NpgsqlDbType.Timestamp:
-			case NpgsqlDbType.TimestampTz:
-				{
-					return "timestamp-millis";
-				}
-			case NpgsqlDbType.Time:
-				{
-					return "time-millis";
-				}
-			case NpgsqlDbType.Date:
-				{
-					return "date";
-				}
-			default:
-				{
-					return string.Empty;
-				}
-		}
-	}
-	
-	private void WriteObject(Utf8JsonWriter writer, ColumnDescriptor column) 
-	{
-		writer.WriteStartObject();
-		writer.WriteString("name", column.Field);
-
-		var npgsqlDbType = ParseEnum(column.Type);
-		
-		var logicalType = GetLogicalType(npgsqlDbType);
-
-		var type = TypeConverterHelper.ConvertNpgsqlDbTypeToAvroType(npgsqlDbType);
-
-		writer.WritePropertyName("type");
-
-		void WriteType(Utf8JsonWriter writer, string type, string logicalType) 
-		{
-			if (string.IsNullOrEmpty(logicalType))
-			{
-				writer.WriteStringValue(type);
-			}
-			else 
-			{
-				writer.WriteStartObject();
-				writer.WriteString("type", type);
-				writer.WriteString("logicalType", logicalType);
-				writer.WriteEndObject();
-			}
-		}
-
-		if (!column.IsNullable)
-		{
-			WriteType(writer, type, logicalType);
-		}
-		else
-		{
-			writer.WriteStartArray();
-			writer.WriteStringValue("null");
-			WriteType(writer, type, logicalType);
-			writer.WriteEndArray();
-			writer.WritePropertyName("default");
-			writer.WriteNullValue();
-		}
-
-		writer.WriteBoolean("is_primary", column.IsPrimary);
-
-		writer.WriteEndObject();
-	}
-
-	protected static NpgsqlDbType ParseEnum(string value)
-	{
-		try
-		{
-			return (NpgsqlDbType)Enum.Parse(typeof(NpgsqlDbType), value, true);
-		}
-		catch
-		{
-			return NpgsqlDbType.Unknown;
-		}
-	}
-
 	public GenericRecord SerializeKafkaMessage(Dictionary<string, object> payload) 
 	{
 		const string operation_key = "_ct";
@@ -111,8 +24,10 @@ public class PgTableSchema : TableSchemaBase
 		var record = new GenericRecord(avroSchema);
 
 		record.Add("op", payload[operation_key]);
-		
+
 		record.Add("ts_ms", DateTime.UtcNow);
+
+		record.Add("table_changed", payload[operation_key]);
 
 		foreach (var item in payload)
 		{
@@ -122,7 +37,7 @@ public class PgTableSchema : TableSchemaBase
 			}
 			if (avroSchema.TryGetField(item.Key, out var field))
 			{
-				record.Add(item.Key, ChangeType(item.Value, field));
+				record.Add(item.Key, TypeConverterHelper.ChangeType(item.Value, field));
 			}
 			else 
 			{
@@ -133,57 +48,11 @@ public class PgTableSchema : TableSchemaBase
 		return record;
 	}
 
-	private object ChangeType(object value, Field field) 
-	{
-		bool isUnionSchema = field.Schema is UnionSchema;
-
-		Type type = null;
-
-		if (isUnionSchema)
-		{
-			type = TypeConverterHelper.ConvertAvroTypeToCSharpType((field.Schema as UnionSchema).Schemas.Last().Name);
-		}
-		else 
-		{
-			type = TypeConverterHelper.ConvertAvroTypeToCSharpType(field.Schema.Name);
-		}
-
-		try
-		{
-			return Convert.ChangeType(value, type);
-		}
-		catch 
-		{
-			return null;
-		}
-	}
-
 	protected override string GenerateAvroSchema()
+		=> this.ConvertPgTableToAvroSchema(ColumnDescriptors =>
 	{
-		var options = new JsonWriterOptions
-		{
-			Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-			Indented = true
-		};
-
-		using var stream = new MemoryStream();
-		using var writer = new Utf8JsonWriter(stream, options);
-		writer.WriteStartObject();
-		writer.WriteString("type", "record");
-		writer.WriteString("name", QualifiedName);
-		writer.WriteString("namespace", "BO.PG.SourceConnector.Convertor");
-		writer.WritePropertyName("fields");
-		writer.WriteStartArray();
-		WriteObject(writer, new ColumnDescriptor { Field = "op", Type = "string" });
-		WriteObject(writer, new ColumnDescriptor { Field = "ts_ms", Type = NpgsqlDbType.Timestamp.ToString() });
-		foreach (var column in ColumnDescriptors)
-		{
-			WriteObject(writer, column);
-		}
-		writer.WriteEndArray();
-		writer.WriteEndObject();
-		writer.Flush();
-
-		return Encoding.UTF8.GetString(stream.ToArray());
-	}
+		ColumnDescriptors.Add(new ColumnDescriptor { Field = "op", Type = "string" });
+		ColumnDescriptors.Add(new ColumnDescriptor { Field = "ts_ms", Type = NpgsqlDbType.Timestamp.ToString() });
+		ColumnDescriptors.Add(new ColumnDescriptor { Field = "table_changed", Type = "string", IsNullable = true });
+	}, "BO.PG.SourceConnector.Avro.Convertor");
 }
