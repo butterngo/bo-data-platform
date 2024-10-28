@@ -23,11 +23,11 @@ public class PgTableSchema : TableSchemaBase
 
 		var record = new GenericRecord(avroSchema);
 
-		record.Add("op", payload[operation_key]);
+		//record.Add("op", payload[operation_key]);
 
 		record.Add("ts_ms", DateTime.UtcNow);
 
-		record.Add("table_changed", payload[operation_key]);
+		//record.Add("table_changed", payload[operation_key]);
 
 		foreach (var item in payload)
 		{
@@ -51,8 +51,6 @@ public class PgTableSchema : TableSchemaBase
 	protected override string GenerateAvroSchema()
 		=> this.ConvertPgTableToAvroSchema(ColumnDescriptors =>
 	{
-		ColumnDescriptors.Add(new ColumnDescriptor { Field = "op", Type = "string" });
 		ColumnDescriptors.Add(new ColumnDescriptor { Field = "ts_ms", Type = NpgsqlDbType.Timestamp.ToString() });
-		ColumnDescriptors.Add(new ColumnDescriptor { Field = "table_changed", Type = "string", IsNullable = true });
-	}, "BO.PG.SourceConnector.Avro.Convertor");
+	});
 }

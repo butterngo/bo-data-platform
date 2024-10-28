@@ -1,15 +1,14 @@
 ﻿using Bo.Kafka;
-using Avro.Generic;
 using BO.Core.Entities;
+using System.Text.Json;
+using Paillave.Etl.Core;
 using BO.Core.Interfaces;
 using BO.Core.Implementations;
 using Microsoft.Extensions.Logging;
-using Confluent.Kafka;
-using Newtonsoft.Json.Linq;
-using BO.Core.Converters;
-using NpgsqlTypes;
-using Avro;
-using Avro.Util;
+using BO.PG.SinkConnector.ValuesProvider;
+using Npgsql;
+using BO.PG.SinkConnector.ValuesProviders;
+
 
 namespace BO.PG.SinkConnector.Handlers;
 
@@ -39,31 +38,6 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 		Consumer?.Dispose();
 	}
 
-	private async Task ExecuteAsync(GenericRecord kafkaMessage, CancellationToken cancellationToken)
-	{
-		//cancellationToken.ThrowIfCancellationRequested();
-
-		//var tableName = _tableRepository.ConvertTableName(kafkaMessage, AppConfiguration.Schema);
-
-		//switch (kafkaMessage.op.ToUpper()) 
-		//{
-		//	case "I": 
-		//		{
-		//			await _tableRepository.InsertAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
-		//			break;
-		//		}
-		//	case "U":
-		//		{
-		//			await _tableRepository.UpdateAsync(AppConfiguration.ConnectionString, tableName, kafkaMessage, cancellationToken);
-		//			break;
-		//		}
-		//	case "D":
-		//		{
-		//			throw new NotImplementedException();
-		//		}
-		//}
-	}
-
 	protected override Task OnBeforeCompleting(TaskRun state, CancellationToken cancellationToken)
 	=> Task.CompletedTask;
 
@@ -78,106 +52,50 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 
 		AppConfiguration = PgAppConfiguration.Deserialize<PgAppConfiguration>(destination.AppConfiguration);
 
-		//await _tableRepository.CreateSchemaIfNotExited(AppConfiguration.ConnectionString, AppConfiguration.Schema, cancellationToken);
-
-		Consumer.Create(options => 
+		var kafkaSourceArgs = new KafkaSourceArgs
 		{
-			options.GroupId = AppConfiguration.Consumer["groupId"].ToString();
-		});
+			Topic = AppConfiguration.TopicPattern,
+			GroupId = destination.Name,
+		};
 
-		if (AppConfiguration.Topics != null)
+		var processRunner = StreamProcessRunner.Create<string>(DefineProcess);
+		processRunner.DebugNodeStream += (sender, e) => { /* PLACE A CONDITIONAL BREAKPOINT HERE FOR DEBUG ex: e.NodeName == "parse file" */ };
+		var executionOptions = new ExecutionOptions<string>
 		{
-			await Consumer.Subscribe(AppConfiguration.Topics, async consumeResult =>
-			{
-				Console.WriteLine($"Key: {consumeResult.Message.Key}\nValue: {consumeResult.Message.Value}");
+			CancellationToken = cancellationToken,
+			TraceProcessDefinition = DefineTraceProcess,
+			Resolver = new SimpleDependencyResolver()
+							.Register(Consumer).Register(kafkaSourceArgs).Register(_tableRepository)
+		};
 
-				//await ExecuteAsync(message, cancellationToken);
-
-			}, cancellationToken);
-
-		}
-
-		if (!string.IsNullOrEmpty(AppConfiguration.TopicPattern))
-		{
-			await Consumer.Subscribe(AppConfiguration.TopicPattern, async consumeResult =>
-			{
-				try
-				{
-					var fields = consumeResult.Message.Value.Schema.Fields;
-					Console.WriteLine($"table {GenerateTable(consumeResult.Message.Value.Schema)}");
-					foreach (var field in fields)
-					{
-						Console.WriteLine($"{field.Name}: {consumeResult.Message.Value[field.Name]}");
-					}
-				}
-				catch (Exception ex) 
-				{
-				}
-				
-
-				//await ExecuteAsync(message, cancellationToken);
-
-			}, cancellationToken);
-		}
-	}
-
-	private static string GetLogicalType(Schema schema) 
-	{
-		string logicalType = null;
-		if (schema is LogicalSchema logicalSchema)
-		{
-			logicalType = logicalSchema.LogicalTypeName;
-		}
-		else if (schema is UnionSchema unionSchema)
-		{
-			foreach (var subSchema in unionSchema.Schemas)
-			{
-				if (subSchema is LogicalSchema logicalSubSchema)
-				{
-					logicalType = logicalSubSchema.LogicalTypeName;
-					break;
-				}
-			}
-		}
-
-		return logicalType;
-	}
-
-	private static string GetAvroType(Schema schema) 
-	{
-		bool isUnionSchema = schema is UnionSchema;
-
-		string type = schema.Name;
-
-		if (isUnionSchema)
-		{
-			type = (schema as UnionSchema).Schemas.Last().Name;
-		}
-	
-		return type;
-	}
-
-	private static string GenerateTable(RecordSchema avroSchema)
-	{
-		string tableName = avroSchema.Name;
+		var res = await processRunner.ExecuteAsync("Stream data 1", executionOptions);
 		
-		List<string> columns = new List<string>();
+	}
+	private static void DefineTraceProcess(IStream<TraceEvent> traceStream, ISingleStream<string> contentStream)
+	{
+		// TODO: Define the ETL process to handle traces here
+	}
 
-		foreach (var field in avroSchema.Fields)
-		{
-			string fieldName = field.Name;
-			string avroType = GetAvroType(field.Schema);
-			string logicalType = GetLogicalType(field.Schema);
+	private static void DefineProcess(ISingleStream<string> contextStream) 
+	{
+		//var stream1 = contextStream
+		//.CrossApply("consumer kafka ", new KafkaConsumeValuesProvider())
+		//.Select("extract message", message => 
+		//{
+		//	return message.Value.Schema.Fields.ToDictionary(field => field.Name, field => message.Value[field.Name]);
+		//}).Do("show data", item => 
+		//{
+		//	Console.WriteLine(JsonSerializer.Serialize(item));
+		//});
 
-			NpgsqlDbType postgresType = TypeConverterHelper.ConvertAvroTypeToNpgsqlDbType(avroType, logicalType);
-
-			columns.Add($"{fieldName} {postgresType.ToString()}");
-		}
-
-		string createTableSQL = $"CREATE TABLE {tableName} (\n  {string.Join(",\n  ", columns)}\n);";
-
-		Console.WriteLine(createTableSQL);
-
-		return tableName;
+		contextStream
+			   .PostgreSqlSource("select data from table", o => o
+				   .FromTable("northwind.products")
+				   .SelectColumns("product_id", "product_name"))
+			   .Select("process data", i => i)
+			   .Do("show data", item =>
+			   {
+				   Console.WriteLine(JsonSerializer.Serialize(item));
+			   }); ;
 	}
 }

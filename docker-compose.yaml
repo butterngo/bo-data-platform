@@ -18,6 +18,15 @@ services:
       - "postgres-data:/var/lib/postgresql/data"
       - "./init-scripts:/docker-entrypoint-initdb.d"
       
+  postgres:
+    image: postgres
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres 
+      
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     restart: always
@@ -46,6 +55,7 @@ services:
     image: confluentinc/cp-schema-registry:latest
     hostname: schema-registry
     container_name: schema-registry
+    restart: always 
     depends_on:
       - zookeeper
       - kafka
@@ -69,6 +79,36 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181   
       KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
-
+      
+  kafka-connect:
+    container_name: afka-connect
+    build:
+      context: ./dockers
+      dockerfile: Docker_Connector
+    restart: always 
+    ports:
+      - "8083:8083"
+    depends_on:
+      - kafka
+      - schema-registry
+      - db
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_GROUP_ID: "1"
+      CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_REST_PORT: 8083
+      CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      
 volumes:
   postgres-data:      

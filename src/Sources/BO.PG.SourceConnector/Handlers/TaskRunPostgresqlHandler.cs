@@ -9,6 +9,7 @@ using BO.Core.Implementations;
 using BO.PG.SourceConnector.Models;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks.Dataflow;
+using System.Text.Json;
 
 namespace BO.PG.SourceConnector.Handlers;
 
@@ -52,18 +53,8 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 
 		var createSqlScript = PgTableExtensions.GenerateCreateTableScript(pgtable);
 
-		var offset = 0;
-
 		await foreach (var item in postgresReader.ReadData(sql, cancellationToken)) 
 		{
-			item.Add("_ct", "I");
-
-			if (offset == 0)
-			{
-				item.Add("table_changed", createSqlScript);
-				offset++;
-			}
-
 			await Producer.ProduceAsync(pgtable.Topic, $"{pgtable.QualifiedName}_{DateTime.Now.Ticks}", pgtable.SerializeKafkaMessage(item), cancellationToken);
 		}
 	}
@@ -94,7 +85,7 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 			
 			cdcData.key = $"{pgtable.QualifiedName}_{DateTime.Now.Ticks}";
 
-			var item = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(cdcData.json);
+			var item = JsonSerializer.Deserialize<Dictionary<string, object>>(cdcData.json);
 
 			var cdcDataOutput = new CdcDataOutput(topic, cdcData.key);
 			try 
@@ -110,8 +101,6 @@ public class TaskRunPostgresqlHandler : TaskRunBaseHandler<TaskRunPostgresqlHand
 				var newColumnDescriptors = await conn.ExtractColumnAsync(new { table_schema = pgtable.TableSchame, table_name = pgtable.TableName });
 
 				await _sourceRepository.UpdateAppConfigurationAsync(state.ReferenceId, AppConfiguration.Serialize());
-
-				item.Add("table_changed", PgTableExtensions.GenerateAlterTableScript(pgtable.TableName, pgtable.ColumnDescriptors, newColumnDescriptors));
 
 				pgtable.ColumnDescriptors = newColumnDescriptors;
 

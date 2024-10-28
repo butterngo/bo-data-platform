@@ -7,5 +7,6 @@ public interface ITaskManagement : IDisposable
     public void Cancel(string taskId);
 
     public Task Completion { get; }
+
     Func<Task, ITaskRun> OnBeforeDispose { get; set; }
 }

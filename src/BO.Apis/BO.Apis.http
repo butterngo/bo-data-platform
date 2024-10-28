@@ -1,5 +1,18 @@
 @BO.Apis_HostAddress = http://localhost:5179
 
+### create sources connector _categories
+
+POST {{BO.Apis_HostAddress }}/connectors/sources/postgresql
+content-type: application/json
+
+{
+  "name": "test",
+  "connectionString": "Host=localhost:5432;Database=bo_data_platform_docker;Username=postgres;Password=password",
+  "schema": "northwind",
+  "tables": "categories",
+  "kafkaServer": "localhost:29092"
+}
+
 ### create sources connector
 
 POST {{BO.Apis_HostAddress }}/connectors/sources/postgresql

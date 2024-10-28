@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Paillave.EtlNet.Core" Version="2.0.47" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Shares\BO.Core\BO.Core.csproj" />
     <ProjectReference Include="..\..\Shares\Bo.Kafka\Bo.Kafka.csproj" />
   </ItemGroup>

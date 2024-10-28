@@ -1,32 +1,22 @@
-﻿using Npgsql;
+﻿using Avro.Generic;
+using Dapper;
+using Npgsql;
 
 namespace BO.PG.SinkConnector;
 
 public class TableRepository
 {
-	private NpgsqlConnection CreateConnection(string connectionString)
+	public NpgsqlConnection CreateConnection(string connectionString)
 	{
 		return new NpgsqlConnection(connectionString);
 	}
 
-	//public string ConvertTableName(KafkaMessageGenerator kafkaMessage, string tableSchema) 
-	//{
-	//	if (!kafkaMessage.source.ContainsKey("table"))
-	//	{
-	//		return string.Empty;
-	//	}
-
-	//	var arr = kafkaMessage.source["table"].ToString().Split('.');
-
-	//	return $"{tableSchema}.{arr[1]}";
-	//}
-
-	//private (string columns, string values) GenerateColumnsAndValues(Dictionary<string, object> data) 
+	//private (string columns, string values) GenerateColumnsAndValues(Dictionary<string, object> data)
 	//{
 	//	var columns = new List<string>();
 	//	var values = new List<string>();
 
-	//	foreach (var item in data) 
+	//	foreach (var item in data)
 	//	{
 	//		if (item.Value == null)
 	//		{
@@ -61,46 +51,20 @@ public class TableRepository
 
 	//public string GenerateUpdateScript(string tableName, Dictionary<string, object> data, string condition)
 	//{
-	//	var updates = string.Join(", ", data.Where(x=>x.Value != null).Select(kv => $"{kv.Key} = @{kv.Key}"));
+	//	var updates = string.Join(", ", data.Where(x => x.Value != null).Select(kv => $"{kv.Key} = @{kv.Key}"));
 
 	//	return $"UPDATE {tableName} SET {updates} WHERE {condition};";
-	//}
-
-	//private object FormatValue(object value)
-	//{
-	//	JsonElement element = ((JsonElement)value);
-	//	switch (element.ValueKind)
-	//	{
-	//		case JsonValueKind.String:
-	//			return element.GetString();
-	//		case JsonValueKind.Number:
-	//			{
-	//				try
-	//				{
-	//					return element.GetInt32();
-	//				}
-	//				catch 
-	//				{
-	//					return element.GetDouble();
-	//				}
-	//			}
-	//		case JsonValueKind.True:
-	//		case JsonValueKind.False:
-	//			return element.GetBoolean();
-	//		default:
-	//			throw new NotImplementedException("Unknown type");
-	//	}
 	//}
 
 	//public string GetSqlType(string type)
 	//{
 	//	return type switch
 	//	{
-	//		"int64"   => NpgsqlDbType.Bigint.ToString(),
-	//		"double"  => NpgsqlDbType.Double.ToString(),
-	//		"float"   => NpgsqlDbType.Real.ToString(),
+	//		"int64" => NpgsqlDbType.Bigint.ToString(),
+	//		"double" => NpgsqlDbType.Double.ToString(),
+	//		"float" => NpgsqlDbType.Real.ToString(),
 	//		"decimal" => NpgsqlDbType.Numeric.ToString(),
-	//		"int32"   => NpgsqlDbType.Smallint.ToString(),
+	//		"int32" => NpgsqlDbType.Smallint.ToString(),
 	//		_ => "TEXT"
 	//	};
 	//}
@@ -114,7 +78,7 @@ public class TableRepository
 	//	await conn.ExecuteAsync($"CREATE SCHEMA IF NOT EXISTS {SchemaName};");
 	//}
 
-	//public async Task InsertAsync(string connectionString, string tableName, KafkaMessageGenerator kafkaMessage, CancellationToken cancellationToken) 
+	//public async Task InsertAsync(string connectionString, string tableName, GenericRecord kafkaMessage, CancellationToken cancellationToken)
 	//{
 	//	using var conn = CreateConnection(connectionString);
 
@@ -124,7 +88,7 @@ public class TableRepository
 
 	//	using (var cmd = new NpgsqlCommand(GenerateInsertScript(tableName, kafkaMessage.payload), conn))
 	//	{
-	//		foreach (var item in kafkaMessage.payload) 
+	//		foreach (var item in kafkaMessage.payload)
 	//		{
 	//			if (item.Value == null)
 	//			{
@@ -137,7 +101,7 @@ public class TableRepository
 	//	}
 	//}
 
-	//public async Task UpdateAsync(string connectionString, string tableName, KafkaMessageGenerator kafkaMessage, CancellationToken cancellationToken) 
+	//public async Task UpdateAsync(string connectionString, string tableName, GenericRecord kafkaMessage, CancellationToken cancellationToken)
 	//{
 	//	using var conn = CreateConnection(connectionString);
 
@@ -163,7 +127,7 @@ public class TableRepository
 	//	}
 	//}
 
-	//public async Task UpsertAsync(string connectionString, string tableName, KafkaMessageGenerator kafkaMessage)
+	//public async Task UpsertAsync(string connectionString, string tableName, GenericRecord kafkaMessage)
 	//{
 	//	using var conn = CreateConnection(connectionString);
 
@@ -174,12 +138,12 @@ public class TableRepository
 	//	await conn.ExecuteAsync(GenerateUpsertScript(tableName, kafkaMessage.payload, primaryField.field));
 	//}
 
-	//public Task DeleteAsync(string connectionString, KafkaMessageGenerator kafkaMessage) 
+	//public Task DeleteAsync(string connectionString, GenericRecord kafkaMessage)
 	//{
 	//	throw new NotImplementedException();
 	//}
 
-	//private KafkaMessageField GetPrimaryField(KafkaMessageGenerator kafkaMessage) 
+	//private GenericRecord GetPrimaryField(GenericRecord kafkaMessage)
 	//{
 	//	return kafkaMessage.schema.fields.FirstOrDefault(x => x.isPrimary);
 	//}
